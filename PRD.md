@@ -11,7 +11,7 @@ The owner is a photographer producing strong stills but struggling to consistent
 
 ## 2. Goal
 
-A zero-input pipeline: the **only** human actions are (a) dumping media into a folder and (b) tapping ✅ / 🔁 / ❌ on the finished reel. Everything else — curation, story detection, mode selection, music matching, motion design, text, captions, hashtags — is decided and executed by the system.
+A zero-input pipeline: the **only** human actions are (a) dumping media into a folder and (b) tapping ✅ / 🔁 / ❌ on the finished reel. Everything else - curation, story detection, mode selection, music matching, motion design, text, captions, hashtags - is decided and executed by the system.
 
 ### Non-goals (v1)
 - Multi-user / SaaS. This is a single-operator personal tool.
