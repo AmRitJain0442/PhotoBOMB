@@ -1,6 +1,6 @@
 # PRD — "Darkroom" : Autonomous Reel Generation Pipeline
 
-**Version:** 1.0 · **Owner:** [Your name] · **Status:** Draft for build
+**Version:** 1.0 · **Owner:** AmritJain0442 · **Status:** Draft for build
 **One-liner:** Dump photos/videos into a folder → receive a finished, stylized Instagram Reel (with music, motion, generated clips, and typography) on Telegram for one-tap approval.
 
 ---
