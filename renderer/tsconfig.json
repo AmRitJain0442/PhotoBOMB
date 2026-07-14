@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "lib": ["DOM", "ES2022"]
   },
-  "include": ["src", "fixtures"]
+  "include": ["src", "fixtures", "workbench"]
 }
