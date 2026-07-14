@@ -1,104 +1,111 @@
-# M1 — Intelligence Pipeline, driven from the Workbench — Design
+# M1 — Darkroom Product App (photos → reel, zero technical surface) — Design
 
-**Date:** 2026-07-14 (revised same day: no CLI — everything operable from the frontend)
+**Date:** 2026-07-14 (rev 3: consumer product UI; JSON workbench removed entirely)
 **Status:** Approved
-**Milestone:** PRD §7 M1 — "librosa beat/energy extraction; Gemini media analysis; Montage Director; local folder→reel works end-to-end" — with the workbench UI as the only control surface.
+**Milestone:** PRD §7 M1 — librosa beat/energy extraction; Gemini media analysis; Montage Director; local folder→reel end-to-end — operated entirely from a consumer-grade frontend.
 
-User decisions (2026-07-14): scope = M1 (no narration — that's M3 narrative mode); runtime split = Python analysis + TS orchestrator (matches Tech Spec §1); audio = mini local library with ingest + per-run track override ("Both"); **no CLI — photos in, reel out, all from the frontend**; generate flow = pipeline stops at EDL loaded into the workbench editor, user tweaks then hits the existing render button; **Google/Gemini models only — no Claude-on-Vertex, no other providers.**
+User decisions (2026-07-14): Python analysis + TS orchestrator (Tech Spec §1 split); audio = local library w/ ingest + per-reel song choice; no CLI, no terminal steps beyond starting the app; **frontend is a product for a non-technical person — no JSON, no schema errors, no pipeline jargon anywhere**; post-generation controls = approve/export, regenerate, tweak basics (switch song, reword on-screen text, remove a photo); **the JSON workbench UI is removed entirely** (its Express server survives as the app's backend); the parked workbench-UI-overhaul spec (`2026-07-14-workbench-ui-overhaul-design.md`, branch `feature/workbench-ui-overhaul`) is **superseded and abandoned**; **Google/Gemini models only.**
 
-## 1. Goal & flow
+## 1. Product flow (three screens)
 
-In the workbench (`npm run workbench`):
+`npm run darkroom` (renamed from `workbench`) → browser opens the app.
 
-1. Drag photos into the assets tray (existing upload, unchanged).
-2. Drop MP3s into a new **music tray** — each upload is auto-ingested (BPM, beat grid, energy, Gemini mood line) and listed.
-3. Hit **develop reel** (optionally pinning a track; default "producer picks"). A stage checklist shows live progress: analyze → produce → direct.
-4. The generated EDL loads into the editor (validated by the existing gate), preview updates, a plan summary shows the Producer's story read, track reason, captions and hashtags.
-5. User tweaks JSON if desired → existing **render mp4** button → reel.
+**Create.** One page: "Add your photos" drop zone (drag/browse; thumbnail grid fills as they upload; small ✕ on each to remove before creating). Music section: uploaded songs as cards showing name + plain-word feel ("warm · slow · 82 bpm-ish" phrasing decided at implementation, no jargon), an "Add a song" drop target (MP3), and a default selected card "Let Darkroom choose". Primary button **Create my reel** — disabled with a friendly hint until ≥3 photos (and ≥1 song OR "choose" selectable only when library non-empty; with an empty library the hint says to add a song first).
 
-No terminal commands beyond starting the workbench.
+**Developing.** Centered single progress moment with darkroom-flavored copy advancing with real stages: analyze → "Looking at your photos…", produce → "Finding the story…", direct → "Cutting to the beat…". No logs, percentages optional. Failure states in human words with one retry button ("That didn't come out right — try again"), the real error only in server logs.
+
+**Review.** Phone-frame preview (Remotion Player, real `Reel` composition) playing the generated reel, with:
+- **Export video** — runs the MP4 render server-side with progress; done → "Save video" (download) + the AI-written caption and hashtags with copy buttons.
+- **Try another take** — regenerate: re-runs produce+direct with a "avoid the previous interpretation" hint (Tech Spec §5 regen behavior, scaled to M1: pass previous track_id + a summary of the prior take to avoid).
+- **Tweaks** (no AI jargon):
+  - **Song switcher** — pick a different card → pipeline re-runs direct with the new track's beat grid (produce kept, track pinned). Progress shown as "Re-cutting to the new song…".
+  - **Text edits** — every on-screen text in the reel listed as editable fields; changing wording mutates the EDL in memory client-side (no LLM call), preview updates instantly. Empty field removes that text.
+  - **Photo strip** — the photos used, in order; ✕ on one → re-runs direct without that asset ("Re-cutting…"). Blocked with a friendly message if it would drop usable count below 3.
+
+The EDL never appears in the UI. It lives in client memory + run records on disk.
 
 ## 2. Repo layout
 
 ```
 analysis/            Python package (mirrors Tech Spec §1 analysis workers)
-  pyproject.toml     deps: google-genai, librosa, opencv-python-headless, imagehash, pillow
-  analyze_media.py   --photos <files...> --cache cache/ --out media_pool.json  (triage + Gemini vision)
-  ingest_audio.py    --track <file> --cache cache/ --out <json>  (BPM/beat grid/energy + Gemini mood)
-orchestrator/        TypeScript package: pure pipeline library (NO CLI)
-  package.json       deps: @google/genai, zod (same major as renderer)
-  src/pipeline.ts    runPipeline(opts, onProgress) — stages in §4
-  src/stages/*.ts    one module per stage
-  src/gemini.ts      Vertex client wrapper (§5)
+  pyproject.toml     google-genai, librosa, opencv-python-headless, imagehash, pillow
+  analyze_media.py   --photos <files...> --cache cache/ --out media_pool.json (triage + Gemini vision)
+  ingest_audio.py    --track <file> --cache cache/ --out <json> (BPM/beat grid/energy + Gemini mood + plain-words feel)
+orchestrator/        TS package: pure pipeline library (no CLI)
+  src/pipeline.ts    runPipeline / revisePipeline (§4), progress callbacks
+  src/stages/*.ts
+  src/gemini.ts      Vertex wrapper (§5)
 prompts/
-  producer.md        Producer prompt (Tech Spec §4–5 heuristics live HERE)
-  director_montage.md Montage Director prompt (closed vocabularies verbatim)
-audio-library/       uploaded MP3s + generated index.json (both gitignored)
-cache/               gitignored; content-hash-keyed analysis artifacts
+  producer.md, director_montage.md
+audio-library/       uploaded MP3s + index.json (gitignored)
+cache/               content-hash-keyed analysis artifacts (gitignored)
+renderer/
+  app/               NEW product frontend (Vite + React) — replaces workbench/ (deleted)
+  server/            existing Express server, extended (§6)
+  src/               Remotion project, unchanged
 ```
 
-The workbench Express server (`renderer/server/workbench-server.mjs`) grows pipeline endpoints (§6) and imports the orchestrator. The orchestrator imports `EdlSchema`/`checkInvariants` from `renderer/src/edl/` — one contract, no duplication. (Server is ESM `.mjs`, orchestrator is TS: orchestrator ships a small build step `tsc` → `dist/`, run automatically by the `workbench` npm script before starting the server.)
+Orchestrator imports `EdlSchema`/`checkInvariants` from `renderer/src/edl/` (single contract). Orchestrator builds via `tsc` → `dist/`, wired into the `darkroom` npm script. `renderer/workbench/` and its components are deleted; reusable pieces (Player wiring, upload plumbing, render-job client) migrate into `app/`.
 
 ## 3. Contracts (Tech Spec, trimmed to M1)
 
-- **`media_pool.json`** — Tech Spec §3 minus clip fields (stills only). `subject_bbox` mandatory. `quality_flags` from OpenCV (blur = variance-of-Laplacian under threshold); phash dedup (distance ≤ threshold keeps the sharper); rejects listed with reasons.
-- **`production_plan.json`** — Tech Spec §4 with M1 constraints: `mode` always `"montage"`, `hero_shots` `[]` (Veo=M4), `voiceover` `null` (M3); `captions`/`hashtags` still generated.
-- **`edl.json`** — existing renderer contract (§6 / `renderer/src/edl/schema.ts`): beat-snapped cuts ±33 ms, `text.in_ms/out_ms` relative to entry start, asset ids resolvable.
-- **`audio-library/index.json`** — per track: `{id, file, bpm, beat_grid_ms, energy_curve, duration_ms, mood}`.
-- **Run record** `out/pipeline/<runId>/` — media_pool, plan, edl, meta.json (stage timings, token usage incl. thoughtsTokenCount, model ids, cache hits).
+- **media_pool.json** — §3 minus clip fields (stills only). `subject_bbox` mandatory; OpenCV blur flags; phash dedup (keep sharper); rejects with reasons.
+- **production_plan.json** — §4 with `mode:"montage"` fixed, `hero_shots:[]`, `voiceover:null`; captions/hashtags generated (surfaced at Export).
+- **edl.json** — existing renderer contract (`renderer/src/edl/schema.ts`); beat-snap ±33 ms; text in/out relative to entry start.
+- **audio-library/index.json** — per track `{id, file, bpm, beat_grid_ms, energy_curve, duration_ms, mood, feel}` where `feel` is the 2–4 plain words shown on cards.
+- **Run record** `out/pipeline/<runId>/` — media_pool, plan, edl, meta.json (timings, tokens incl. thoughtsTokenCount, models, cache hits).
 
-## 4. Pipeline stages (orchestrator library)
+## 4. Pipeline library
 
-`runPipeline({photoFiles, track?: 'auto' | trackId, models}, onProgress)`:
+`runPipeline({photoFiles, track: 'auto'|trackId, avoid?}, onProgress)` — stages: **analyze** (spawn analyze_media.py over uploaded raster photos; per-photo Gemini cached by content hash) → **produce** (Gemini + producer.md; Zod ProductionPlanSchema gate, 1 repair retry) → **direct** (Gemini + director_montage.md; EdlSchema + checkInvariants gate, 1 repair retry, Tech Spec §6) → **finalize** (copy track into `renderer/public/assets/audio/`, write run record, return {edl, plan, meta}).
 
-1. **analyze** — spawn `analyze_media.py` over the workbench's uploaded **raster photos** (jpg/jpeg/png/webp under `renderer/public/assets/`; SVG fixtures automatically excluded). Per-photo Gemini results cached by content hash — re-develops skip the API.
-2. **produce** — one Gemini call: producer prompt + media_pool + audio index (or pinned track info) → plan. Zod `ProductionPlanSchema` gate, one repair retry, then hard fail.
-3. **direct** — one Gemini call: director prompt + plan + pool + beat grid → EDL. Gate: `EdlSchema.parse` + `checkInvariants`. On failure: errors sent back, "fix and re-emit JSON only", max 1 retry (Tech Spec §6), then hard fail with the errors.
-4. **finalize** — copy the chosen track into `renderer/public/assets/audio/` so `staticFile()` resolves it for Player preview and CLI render; write the run record; return `{edl, plan, mediaPool, meta}`.
+`revisePipeline({runId, pin?: trackId, removeAsset?: assetId})` — reuses the run's media_pool and plan (track pin replaces plan.audio; removed asset filtered from selects) and re-runs **direct** only. Regenerate = `runPipeline` with `avoid` populated from the previous run.
 
-Guard: <3 usable photos after triage → stop with "not enough usable photos". Each stage failure carries the stage name + human-readable reason (surfaced in the UI checklist).
+Guards: <3 usable photos after triage → friendly failure. Every stage error carries stage + human-readable reason; the UI maps stages to product copy and shows generic friendly failure text.
 
-Render is NOT a pipeline stage — the user renders from the existing render deck after reviewing the EDL.
+Render is not a pipeline stage — Export triggers the existing render job with the current (possibly text-tweaked) in-memory EDL.
 
 ## 5. Gemini client (Google models only)
 
-- `gemini-2.5-flash` for everything; a UI toggle ("director quality: flash / pro") swaps only the direct stage to `gemini-2.5-pro`. No other providers, ever.
-- Vertex AI, project `project-a2dcdad0-5d65-4d61-846`, `us-central1` (per GCP_MODELS_USAGE.md).
-- Auth: the workbench server sets `GOOGLE_APPLICATION_CREDENTIALS` to `<repo>/my-product-sa-key.json` at startup if the env var is unset and the file exists (zero-config); otherwise env var wins. Key is git-ignored. If neither exists, pipeline endpoints return a clear setup error; the rest of the workbench works as before.
-- JSON discipline: `responseMimeType: "application/json"` + `responseSchema`; `maxOutputTokens` ≥ 8192 (thinking-token gotcha). Verify current SDK shapes via Context7 at implementation time.
-- Wrapper: `generateJson<T>({model, systemFile, parts, schema}): Promise<{data: T, usage}>` — one retry on invalid JSON. Python mirrors minimally for the vision batch.
+- `gemini-2.5-flash` everywhere. (`gemini-2.5-pro` reserved as an internal env-var escape hatch `DARKROOM_DIRECTOR_MODEL=pro` — no UI toggle; non-technical users don't pick models.)
+- Vertex AI, project `project-a2dcdad0-5d65-4d61-846`, `us-central1` (GCP_MODELS_USAGE.md). No other providers, ever.
+- Auth: server sets `GOOGLE_APPLICATION_CREDENTIALS` to `<repo>/my-product-sa-key.json` at startup when unset and present (zero-config); pipeline endpoints return a friendly setup error otherwise.
+- All calls: `responseMimeType:"application/json"` + `responseSchema`, `maxOutputTokens` ≥ 8192 (thinking-token gotcha). Verify SDK shapes via Context7 at implementation.
+- Wrapper `generateJson<T>({model, systemFile, parts, schema})` with one invalid-JSON retry; injectable for tests.
 
-## 6. Server endpoints (added to workbench-server.mjs)
+## 6. Server endpoints (extend `renderer/server/workbench-server.mjs`)
 
-- `GET  /api/audio` — track list from index.json (`[]` + hint if empty).
-- `POST /api/audio` — multer MP3 upload → spawn `ingest_audio.py` → update index.json → return track entry. (Synchronous is fine; ingest is seconds.)
-- `POST /api/pipeline/run` — body `{track: 'auto'|trackId, directorModel: 'flash'|'pro'}` → 202 `{runId}`; 409 if a pipeline or ingest already running (same single-job pattern as render).
-- `GET  /api/pipeline/status` — `{state: idle|running|done|failed, stage, stageStates, error, runId}` — UI polls every 2 s (same pattern as render status).
-- `GET  /api/pipeline/result/:runId` — `{edl, plan}` when done.
+Existing kept: photo upload (`POST /api/assets`), asset list, render job trio (`POST /api/render`, status, `/renders/:file`), single-in-flight-job discipline.
 
-## 7. Workbench UI additions (plain, matching current styling — the visual overhaul is a separate parked spec)
+Added:
+- `GET/POST /api/audio` — track list / MP3 upload (multer) → spawn ingest_audio.py → updated entry. Ingest failures return a friendly message ("We couldn't read that song file").
+- `POST /api/pipeline/run` — `{track, avoid?}` → 202 `{runId}`; 409 if busy.
+- `POST /api/pipeline/revise` — `{runId, pin?|removeAsset?}` → 202 `{runId}` (new runId, direct-only).
+- `GET /api/pipeline/status` — `{state, stage, error, runId}`; UI polls 2 s.
+- `GET /api/pipeline/result/:runId` — `{edl, plan}` (plan supplies captions/hashtags/text list metadata).
+- `DELETE /api/assets/:file` — remove an uploaded photo (Create screen ✕). Basename-sanitized like existing handlers.
 
-- **Music tray** (between filmstrip and render deck): drag-drop/browse MP3 upload; rows show name, BPM, duration, mood line; radio pick "producer chooses" (default) or pin a track.
-- **Develop deck**: "develop reel" button (disabled with reason if <3 raster photos or no tracks and no pin), director flash/pro toggle, stage checklist with live states (pending/running/done/failed + failure reason), and on success a **plan card**: story read, chosen track + reason, captions, hashtags.
-- On completion the EDL JSON replaces the editor content (the previous text is recoverable via the existing "load fixture" button and browser undo; acceptable for a dev tool).
-- Existing preview/render flow unchanged.
+## 7. Visual design (implementation via frontend-design skill)
+
+Consumer-warm darkroom identity: the lab metaphor stays (developing, takes, prints) but softened for a non-technical owner — inviting, photographic, zero instrument-panel severity. Design tokens, type pairing, and the signature moment (the "developing" screen) get a dedicated design pass at implementation; quality floor: responsive to mobile widths, visible focus, `prefers-reduced-motion` respected, friendly empty states ("Your photos will appear here"). All copy in product voice: verbs, sentence case, no jargon (never "EDL", "render job", "pipeline", "invariant").
 
 ## 8. Out of scope (M1)
 
-Video clips/scene detection (M4), Veo (M4), narration/Cloud TTS (M3), narrative & edit Directors (M3), track-matching embeddings (M2+; the Producer reads the index text), GCP deploy/Firestore/Telegram (M2), the visual UI overhaul (parked spec on `feature/workbench-ui-overhaul`), auth/multi-user (local single-user tool).
+Video clips (M4), Veo (M4), narration/Cloud TTS (M3), narrative/edit modes (M3), embeddings (M2+), GCP deploy/Telegram (M2), timeline drag-editing, accounts/multi-user, the abandoned CodeMirror workbench overhaul.
 
 ## 9. Testing
 
-- **No live API calls in test suites.** Gemini wrapper injectable; canned responses.
-- TS (vitest, orchestrator/): prompt assembly snapshots, ProductionPlanSchema accept/reject, direct-stage repair loop wiring (bad EDL → retry → hard fail), cache keys, pipeline state machine transitions.
-- Python (pytest, analysis/): phash dedup keeps sharper duplicate, blur threshold flagging, beat grid on a generated click track, cache hit skips recompute.
-- Server: endpoint tests with the orchestrator stubbed (409 discipline, status shape).
-- **Live verification (manual):** real photos + a real MP3 through the UI — watch stages, inspect EDL in editor, render, watch reel. Browser pass via claude-in-chrome.
+- No live API calls in suites; Gemini wrapper injectable.
+- vitest (orchestrator): prompt assembly snapshots, plan schema accept/reject, direct repair loop, revise semantics (pin/removeAsset), avoid-hint construction, cache keys.
+- pytest (analysis): dedup keeps sharper, blur flags, beat grid on click track, cache hits.
+- Server: endpoint tests with orchestrator stubbed (409s, status shapes, delete sanitization).
+- Frontend: vitest for EDL text-mutation helper (reword/remove text → valid EDL, verified against imported EdlSchema).
+- Live manual: real photos + MP3 through the UI; browser pass (claude-in-chrome) across all three screens incl. tweaks and export.
 
 ## 10. Risks / notes
 
-- SA has `roles/aiplatform.user` on the Gemini project (GCP_MODELS_USAGE.md §5b); implementation starts with a cheap live smoke call to fail fast on auth.
-- librosa/MP3 on Windows: prefer soundfile/audioread wheels; fall back to ffmpeg decode if needed.
-- Python discovery: server tries `py -3` then `python`; clear UI error if neither exists.
+- SA already has `roles/aiplatform.user` on the Gemini project; first implementation task includes a live smoke call to fail fast on auth.
+- librosa/MP3 on Windows: soundfile/audioread wheels, ffmpeg fallback.
+- Python discovery: `py -3` then `python`; friendly UI error if absent.
 - Vision batch size: start 10 images/call; tune.
-- Costs are pennies per run (Tech Spec §11); usage logged in meta.json.
+- Regeneration cost is pennies; tokens logged per run.
