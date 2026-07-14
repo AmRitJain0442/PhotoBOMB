@@ -31,7 +31,7 @@ export const KineticWord: React.FC<{
     >
       {timings.map(({word, atMs}, i) => {
         const atF = msToFrame(atMs, fps);
-        const scale = interpolate(frame, [atF, atF + pop], [1.5, 1], {
+        const scale = interpolate(frame, [atF, atF + pop], [1.15, 1], {
           extrapolateLeft: 'clamp',
           extrapolateRight: 'clamp',
         });

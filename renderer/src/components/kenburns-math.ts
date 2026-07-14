@@ -17,6 +17,10 @@ export const kenBurnsAt = (
   const zoom = lerp(motion.from.zoom, motion.to.zoom);
   const cx = lerp(motion.from.cx, motion.to.cx);
   const cy = lerp(motion.from.cy, motion.to.cy);
-  // translate so the focal point (cx, cy) sits at frame center
-  return {zoom, txPct: (0.5 - cx) * 100, tyPct: (0.5 - cy) * 100};
+  // translate so the focal point (cx, cy) sits at frame center, but never
+  // beyond the coverage limit: |pan| <= 50*(zoom-1)/zoom keeps the scaled
+  // image covering the full frame (no background bars).
+  const maxPan = zoom > 1 ? (50 * (zoom - 1)) / zoom : 0;
+  const clamp = (v: number) => Math.min(maxPan, Math.max(-maxPan, v)) + 0;
+  return {zoom, txPct: clamp((0.5 - cx) * 100), tyPct: clamp((0.5 - cy) * 100)};
 };
