@@ -84,6 +84,19 @@ describe('checkInvariants', () => {
     expect(checkInvariants(edl, assets).join(' ')).toMatch(/MISSING/);
   });
 
+  test('flags cutout_pop from an asset without a cutout', () => {
+    const edl = base();
+    edl.timeline[0].transition_out = {type: 'cutout_pop', duration_ms: 400};
+    expect(checkInvariants(edl, assets, new Set(['B'])).join(' ')).toMatch(/cutout/i);
+    expect(checkInvariants(edl, assets, new Set(['A']))).toEqual([]);
+  });
+
+  test('cutout_pop is unchecked when no cutout set is provided', () => {
+    const edl = base();
+    edl.timeline[0].transition_out = {type: 'cutout_pop', duration_ms: 400};
+    expect(checkInvariants(edl, assets)).toEqual([]);
+  });
+
   test('detects text overrunning its entry', () => {
     const edl = base();
     edl.timeline[0].text = {
