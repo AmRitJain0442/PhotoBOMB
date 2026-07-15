@@ -21,7 +21,17 @@ export function setText(edl: Edl, entryIndex: number, content: string): Edl {
       const {text: _dropped, ...rest} = entry;
       return rest;
     }
-    return {...entry, text: {...entry.text, content: trimmed}};
+    // emphasis is the model's job — a hand-edited quote goes plain white
+    return {
+      ...entry,
+      text: {
+        ...entry.text,
+        content: trimmed,
+        ...(entry.text.spans
+          ? {spans: [{text: trimmed, bold: false, underline: false, tone: 'white' as const}]}
+          : {}),
+      },
+    };
   });
   return {...edl, timeline};
 }
