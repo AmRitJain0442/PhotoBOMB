@@ -1,0 +1,6 @@
+# Secrets — never commit credentials
+my-product-sa-key.json
+*-sa-key.json
+*.serviceaccount.json
+.env
+.env.*

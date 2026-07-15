@@ -1,4 +1,4 @@
-import type {Edl} from './schema';
+import type {Edl} from './schema.js';
 
 const BEAT_TOLERANCE_MS = 33;
 

@@ -1,15 +1,23 @@
 {
   "name": "darkroom-renderer",
   "private": true,
+  "type": "module",
   "scripts": {
     "studio": "remotion studio",
     "render": "remotion render Reel out/reel.mp4 --props=fixtures/montage.json",
     "fixtures": "node scripts/make-fixtures.mjs",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "darkroom": "npm --prefix ../orchestrator run build && concurrently -k \"node server/workbench-server.mjs\" \"vite --config app/vite.config.ts --open\"",
+    "workbench": "npm run darkroom"
   },
   "dependencies": {
+    "@fontsource/fraunces": "^5.0.0",
+    "@fontsource/public-sans": "^5.0.0",
     "@remotion/cli": "^4.0.0",
+    "@remotion/player": "^4.0.489",
+    "express": "^5.2.1",
+    "multer": "^2.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "remotion": "^4.0.0",
@@ -17,7 +25,11 @@
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "concurrently": "^10.0.3",
     "typescript": "^5.5.0",
+    "vite": "^7.3.6",
     "vitest": "^3.0.0"
   }
 }
