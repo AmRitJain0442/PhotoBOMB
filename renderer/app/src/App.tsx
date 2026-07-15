@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 
 import type {RunResultPayload} from './api';
 import * as api from './api';
+import {ExportPanel} from './components/ExportPanel';
 import {CreateScreen} from './screens/CreateScreen';
 import {DevelopingScreen} from './screens/DevelopingScreen';
 import {ReviewScreen} from './screens/ReviewScreen';
@@ -43,6 +44,9 @@ export const App: React.FC = () => {
               // stay on review if the retake could not start
             }
           }}
+          exportSlot={(edl, assets) => (
+            <ExportPanel edl={edl} assets={assets} plan={result.plan} />
+          )}
         />
       )}
     </div>
