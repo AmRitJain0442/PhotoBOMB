@@ -2,19 +2,9 @@ import React, {useState} from 'react';
 
 import type {RunResultPayload} from './api';
 import {CreateScreen} from './screens/CreateScreen';
+import {DevelopingScreen} from './screens/DevelopingScreen';
 
 export type Phase = 'create' | 'developing' | 'review';
-
-const DevelopingPlaceholder: React.FC<{onDone: () => void}> = ({onDone}) => (
-  <div className="develop-room">
-    <div className="safelight-glow" />
-    <div className="develop-reel" />
-    <div className="develop-line">Developing…</div>
-    <button className="btn btn-secondary" onClick={onDone}>
-      skip
-    </button>
-  </div>
-);
 
 const ReviewPlaceholder: React.FC<{onBack: () => void}> = ({onBack}) => (
   <div>
@@ -29,7 +19,7 @@ const ReviewPlaceholder: React.FC<{onBack: () => void}> = ({onBack}) => (
 
 export const App: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('create');
-  const [, setResult] = useState<RunResultPayload | null>(null);
+  const [result, setResult] = useState<RunResultPayload | null>(null);
 
   return (
     <div className="shell">
@@ -39,14 +29,15 @@ export const App: React.FC = () => {
       </header>
       {phase === 'create' && <CreateScreen onStarted={() => setPhase('developing')} />}
       {phase === 'developing' && (
-        <DevelopingPlaceholder
-          onDone={() => {
-            setResult(null);
+        <DevelopingScreen
+          onDone={(r) => {
+            setResult(r);
             setPhase('review');
           }}
+          onFailed={() => setPhase('create')}
         />
       )}
-      {phase === 'review' && <ReviewPlaceholder onBack={() => setPhase('create')} />}
+      {phase === 'review' && result && <ReviewPlaceholder onBack={() => setPhase('create')} />}
     </div>
   );
 };
