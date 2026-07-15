@@ -1,21 +1,12 @@
 import React, {useState} from 'react';
 
 import type {RunResultPayload} from './api';
+import * as api from './api';
 import {CreateScreen} from './screens/CreateScreen';
 import {DevelopingScreen} from './screens/DevelopingScreen';
+import {ReviewScreen} from './screens/ReviewScreen';
 
 export type Phase = 'create' | 'developing' | 'review';
-
-const ReviewPlaceholder: React.FC<{onBack: () => void}> = ({onBack}) => (
-  <div>
-    <h2 className="screen-title">Your reel</h2>
-    <div className="card">
-      <button className="btn btn-secondary" onClick={onBack}>
-        Start over
-      </button>
-    </div>
-  </div>
-);
 
 export const App: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('create');
@@ -37,7 +28,23 @@ export const App: React.FC = () => {
           onFailed={() => setPhase('create')}
         />
       )}
-      {phase === 'review' && result && <ReviewPlaceholder onBack={() => setPhase('create')} />}
+      {phase === 'review' && result && (
+        <ReviewScreen
+          result={result}
+          onResult={setResult}
+          onAnotherTake={async () => {
+            try {
+              await api.runPipeline('auto', {
+                track_id: result.plan.audio.track_id,
+                summary: result.plan.story.read,
+              });
+              setPhase('developing');
+            } catch {
+              // stay on review if the retake could not start
+            }
+          }}
+        />
+      )}
     </div>
   );
 };
