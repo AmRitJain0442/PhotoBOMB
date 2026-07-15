@@ -59,6 +59,14 @@ def test_first_mask_parses_and_strips_data_uri():
     assert mask == base64.b64decode(mask_b64)
 
 
+def test_full_frame_subject_skips_the_api_entirely(tmp_path):
+    photo = _photo(tmp_path)
+    # client=None proves no API call is attempted for a near-full-frame subject
+    assert segment.cutout_png(None, photo, "whole scene", [0, 0, 1, 1]) is None
+    assert segment.bbox_area_frac([0.1, 0.1, 0.6, 0.6]) < segment.MAX_AREA_FRAC
+    assert segment.bbox_area_frac("garbage") == 0.0
+
+
 def test_first_mask_absent_or_malformed():
     assert segment.first_mask("[]") is None
     assert segment.first_mask("not json") is None
