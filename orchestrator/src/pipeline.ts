@@ -67,11 +67,17 @@ export function makeSpawnPy(repoRoot: string): PipelineDeps['spawnPy'] {
 }
 
 export async function runPipeline(
-  opts: {photosDir: string; track: 'auto' | string; avoid?: Avoid; deps: PipelineDeps},
+  opts: {
+    photosDir: string;
+    track: 'auto' | string;
+    avoid?: Avoid;
+    runId?: string;
+    deps: PipelineDeps;
+  },
   onProgress: Progress,
 ): Promise<RunResult> {
   const {deps} = opts;
-  const runId = newRunId();
+  const runId = opts.runId ?? newRunId();
 
   onProgress('analyze', 'running');
   const mediaPool = await runAnalyze(deps, opts.photosDir, runId);
@@ -104,7 +110,13 @@ export async function runPipeline(
 }
 
 export async function revisePipeline(
-  opts: {runId: string; pin?: string; removeAsset?: string; deps: PipelineDeps},
+  opts: {
+    runId: string;
+    pin?: string;
+    removeAsset?: string;
+    asRunId?: string;
+    deps: PipelineDeps;
+  },
   onProgress: Progress,
 ): Promise<RunResult> {
   const {deps} = opts;
@@ -146,7 +158,7 @@ export async function revisePipeline(
 
   onProgress('finalize', 'running');
   const result = await runFinalize(deps, {
-    runId: newRunId(),
+    runId: opts.asRunId ?? newRunId(),
     edl: directed.edl,
     plan,
     mediaPool,
