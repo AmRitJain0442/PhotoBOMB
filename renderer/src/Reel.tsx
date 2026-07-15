@@ -3,6 +3,7 @@ import {AbsoluteFill, Audio, Img, Sequence, staticFile} from 'remotion';
 import type {Edl, TimelineEntry} from './edl/schema';
 import {msToFrame} from './edl/time';
 import {KenBurns} from './components/KenBurns';
+import {QuoteCardBackdrop} from './components/QuoteCardBackdrop';
 import {TextOverlay} from './components/text/TextOverlay';
 
 export type ReelProps = {
@@ -19,7 +20,9 @@ const Shot: React.FC<{
   const durF = msToFrame(entry.end_ms, fps) - msToFrame(entry.start_ms, fps);
   return (
     <AbsoluteFill>
-      {entry.motion && entry.motion.type === 'ken_burns' ? (
+      {entry.effects.includes('quote_card') ? (
+        <QuoteCardBackdrop src={src} durationInFrames={durF} />
+      ) : entry.motion && entry.motion.type === 'ken_burns' ? (
         <KenBurns src={src} motion={entry.motion} durationInFrames={durF} />
       ) : (
         <Img src={src} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
