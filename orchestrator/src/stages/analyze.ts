@@ -3,7 +3,7 @@ import {mkdir, readFile} from 'node:fs/promises';
 import path from 'node:path';
 
 import {PipelineError, type MediaPool} from '../contracts.js';
-import {cacheDir, runDir} from '../paths.js';
+import {cacheDir, rendererCutoutsDir, runDir} from '../paths.js';
 import type {PipelineDeps} from '../pipeline.js';
 
 export async function runAnalyze(
@@ -21,6 +21,8 @@ export async function runAnalyze(
     cacheDir(deps.repoRoot),
     '--out',
     outFile,
+    '--cutouts',
+    rendererCutoutsDir(deps.repoRoot),
   ]);
 
   if (code === 3) throw new PipelineError('analyze', 'not_enough_photos');

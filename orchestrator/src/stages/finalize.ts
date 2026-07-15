@@ -27,11 +27,16 @@ export async function runFinalize(deps: PipelineDeps, opts: FinalizeOptions): Pr
     path.join(audioDir, opts.track.file),
   );
 
-  // the renderer resolves audio relative to public/ — pin regardless of what
-  // the Director wrote
+  // the renderer resolves paths relative to public/ — pin the audio track and
+  // cutout paths regardless of what the Director wrote
   const edl: Edl = {
     ...opts.edl,
     audio: {...opts.edl.audio, track: `assets/audio/${opts.track.file}`},
+    timeline: opts.edl.timeline.map((e) =>
+      e.transition_out?.type === 'cutout_pop'
+        ? {...e, cutout: `assets/cutouts/${e.asset}.png`}
+        : e,
+    ),
   };
 
   const meta: RunMeta = {

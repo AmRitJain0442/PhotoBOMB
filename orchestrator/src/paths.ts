@@ -11,3 +11,5 @@ export const promptPath = (root: string, name: string): string =>
   path.join(root, 'prompts', name);
 export const rendererAudioDir = (root: string): string =>
   path.join(root, 'renderer', 'public', 'assets', 'audio');
+export const rendererCutoutsDir = (root: string): string =>
+  path.join(root, 'renderer', 'public', 'assets', 'cutouts');
