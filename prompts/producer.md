@@ -45,9 +45,10 @@ photo montage reel.
   what is visibly in the photos — never generic filler ("memories made",
   "good vibes" and the like are banned). Each line is an array of spans
   `{text, bold, underline, tone}`. Emphasize 2–4 words total across the whole
-  quote using `bold` and/or `underline`. Set `tone: "yellow"` on exactly one
-  word or one contiguous phrase — the emotional center of the quote;
-  everything else stays `"white"`.
+  quote using `bold` and/or `underline`. You MUST set `tone: "yellow"` on
+  exactly one word or one contiguous phrase — the emotional center of the
+  quote (an all-white quote is invalid and will be rejected); everything else
+  stays `"white"`.
 - **captions**: write `short` (one line, ready to paste under the reel) and
   `long` (2–3 sentences, same voice, no hashtags inside). Ground both in what
   is actually in the photos.
@@ -70,7 +71,7 @@ Respond with the production_plan JSON ONLY — no prose, no markdown fences:
   "hero_shots": [],
   "audio": {"track_id": "...", "reason": "...", "trim_start_ms": 0},
   "typography_direction": "...",
-  "quote": {"lines": [[{"text": "...", "bold": false, "underline": false, "tone": "white"}]]},
+  "quote": {"lines": [[{"text": "...", "bold": false, "underline": false, "tone": "white"}, {"text": "...", "bold": true, "underline": false, "tone": "yellow"}]]},
   "voiceover": null,
   "captions": {"short": "...", "long": "..."},
   "hashtags": ["...", ...]

@@ -17,7 +17,11 @@ export const ProductionPlanSchema = z.object({
     trim_start_ms: z.number().int().min(0).default(0),
   }),
   typography_direction: z.string().default(''),
-  quote: z.object({lines: z.array(z.array(SpanSchema).min(1)).min(1).max(2)}),
+  quote: z
+    .object({lines: z.array(z.array(SpanSchema).min(1)).min(1).max(2)})
+    .refine((q) => q.lines.flat().some((s) => s.tone === 'yellow'), {
+      message: 'the quote needs tone "yellow" on exactly one word or contiguous phrase',
+    }),
   voiceover: z.null().default(null),
   captions: z.object({short: z.string(), long: z.string()}),
   hashtags: z.array(z.string()).min(1),

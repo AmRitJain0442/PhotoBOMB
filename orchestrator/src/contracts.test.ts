@@ -41,8 +41,20 @@ describe('ProductionPlanSchema', () => {
     ).toThrow();
   });
 
+  it('rejects an all-white quote (the emotional center must be yellow)', () => {
+    expect(() =>
+      ProductionPlanSchema.parse({
+        ...PLAN,
+        quote: {lines: [[{text: 'dusk settles', tone: 'white'}]]},
+      }),
+    ).toThrow();
+  });
+
   it('defaults span emphasis fields', () => {
-    const parsed = ProductionPlanSchema.parse({...PLAN, quote: {lines: [[{text: 'dusk'}]]}});
+    const parsed = ProductionPlanSchema.parse({
+      ...PLAN,
+      quote: {lines: [[{text: 'dusk'}, {text: 'glows', tone: 'yellow'}]]},
+    });
     expect(parsed.quote.lines[0][0]).toEqual({
       text: 'dusk',
       bold: false,
