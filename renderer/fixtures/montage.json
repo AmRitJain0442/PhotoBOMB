@@ -105,7 +105,18 @@
           },
           "easing": "easeOutCubic"
         },
-        "effects": []
+        "effects": [],
+        "text": {
+          "content": "stay for the light",
+          "style": "quote_duotone",
+          "in_ms": 0,
+          "out_ms": 1000,
+          "anchor": "center",
+          "spans": [
+            {"text": "stay for the", "bold": false, "underline": false, "tone": "white"},
+            {"text": "light", "bold": true, "underline": false, "tone": "yellow"}
+          ]
+        }
       },
       {
         "asset": "IMG_004",
@@ -168,6 +179,8 @@
           },
           "easing": "easeOutCubic"
         },
+        "transition_out": {"type": "cutout_pop", "duration_ms": 400},
+        "cutout": "assets/cutouts/IMG_006.png",
         "effects": []
       },
       {
