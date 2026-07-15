@@ -78,7 +78,11 @@ export const ReviewScreen: React.FC<{
       <p className="screen-sub">{result.plan.story.read}</p>
       <div className="row">
         <div className="col" style={{flex: '0 0 auto', minWidth: 330}}>
-          <PhoneFrame edl={edl} assets={memoAssets} dimmed={revising !== null} />
+          {Object.keys(memoAssets).length > 0 ? (
+            <PhoneFrame edl={edl} assets={memoAssets} dimmed={revising !== null} />
+          ) : (
+            <div className="card" style={{width: 324, height: 557}} />
+          )}
           {revising && <span className="hint">{revising}</span>}
           {note && <span className="error-note">{note}</span>}
         </div>
