@@ -2,7 +2,7 @@
 import {fileURLToPath} from 'node:url';
 import {dirname, join} from 'node:path';
 import {z} from 'zod';
-import {generateJson, MODELS, resolveCredentials, vertexTransport} from '../dist/gemini.js';
+import {generateJson, MODELS, resolveCredentials, vertexTransport} from '../dist/orchestrator/src/gemini.js';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const cred = resolveCredentials(repoRoot);

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "dist/pipeline.js",
+  "main": "dist/orchestrator/src/pipeline.js",
   "scripts": {
     "build": "tsc",
     "test": "vitest run",

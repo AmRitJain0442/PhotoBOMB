@@ -1,4 +1,4 @@
-import {existsSync} from 'node:fs';
+﻿import {existsSync} from 'node:fs';
 import {join} from 'node:path';
 import type {z} from 'zod';
 
@@ -30,7 +30,7 @@ const addUsage = (a: GeminiUsage, b: GeminiUsage): GeminiUsage => ({
   thoughtsTokens: a.thoughtsTokens + b.thoughtsTokens,
 });
 
-const tryParse = <T>(text: string, schema: z.ZodType<T>): {data: T} | {error: string} => {
+const tryParse = <T>(text: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>): {data: T} | {error: string} => {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
@@ -52,7 +52,7 @@ export async function generateJson<T>(opts: {
   model: string;
   system: string;
   parts: Array<{text: string}>;
-  zodSchema: z.ZodType<T>;
+  zodSchema: z.ZodType<T, z.ZodTypeDef, unknown>;
   responseSchema: object;
   maxOutputTokens?: number;
   repairNote?: string;

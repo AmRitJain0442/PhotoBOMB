@@ -4,13 +4,18 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": "..",
     "strict": true,
     "declaration": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "esModuleInterop": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts"]
+  "include": [
+    "src/**/*.ts",
+    "../renderer/src/edl/schema.ts",
+    "../renderer/src/edl/invariants.ts",
+    "../renderer/src/edl/time.ts"
+  ],
+  "exclude": ["src/**/*.test.ts", "src/test-fixtures.ts"]
 }
