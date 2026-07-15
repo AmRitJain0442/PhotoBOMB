@@ -70,6 +70,33 @@ describe('runDirect', () => {
     });
   });
 
+  const withPop = (asset: string) => {
+    const edl = goodEdl();
+    const timeline = edl.timeline as Array<{asset: string; transition_out?: unknown}>;
+    const i = timeline.findIndex((e) => e.asset === asset);
+    timeline[i].transition_out = {type: 'cutout_pop', duration_ms: 400};
+    return edl;
+  };
+
+  it('accepts cutout_pop on an asset that has a cutout', async () => {
+    const {transport} = makeTransport([JSON.stringify(withPop('img0'))]);
+    const deps = makeDeps(root, transport);
+    const res = await runDirect(deps, {plan: PLAN, mediaPool: MEDIA_POOL, track: TRACKS[0]});
+    expect(res.edl.timeline[0].transition_out?.type).toBe('cutout_pop');
+  });
+
+  it('repairs cutout_pop on an asset without a cutout', async () => {
+    const {transport, calls} = makeTransport([
+      JSON.stringify(withPop('img3')), // img3 has has_cutout: false
+      JSON.stringify(withPop('img0')),
+    ]);
+    const deps = makeDeps(root, transport);
+    const res = await runDirect(deps, {plan: PLAN, mediaPool: MEDIA_POOL, track: TRACKS[0]});
+    expect(res.edl.timeline[3].transition_out).toBeUndefined();
+    expect(calls).toHaveLength(2);
+    expect(calls[1].parts.map((p) => p.text).join('\n')).toMatch(/cutout/i);
+  });
+
   it('uses the configured director model', async () => {
     const {transport, calls} = makeTransport([JSON.stringify(goodEdl())]);
     const deps = {...makeDeps(root, transport), directorModel: 'gemini-2.5-pro'};
