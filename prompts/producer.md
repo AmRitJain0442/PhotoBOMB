@@ -41,6 +41,13 @@ photo montage reel.
   in this milestone).
 - **typography_direction**: one short phrase guiding the Director's text styling
   (e.g. "sparse lowercase captions, warm and personal").
+- **quote**: write 1–2 short poetic lines (6 words max per line) grounded in
+  what is visibly in the photos — never generic filler ("memories made",
+  "good vibes" and the like are banned). Each line is an array of spans
+  `{text, bold, underline, tone}`. Emphasize 2–4 words total across the whole
+  quote using `bold` and/or `underline`. Set `tone: "yellow"` on exactly one
+  word or one contiguous phrase — the emotional center of the quote;
+  everything else stays `"white"`.
 - **captions**: write `short` (one line, ready to paste under the reel) and
   `long` (2–3 sentences, same voice, no hashtags inside). Ground both in what
   is actually in the photos.
@@ -63,6 +70,7 @@ Respond with the production_plan JSON ONLY — no prose, no markdown fences:
   "hero_shots": [],
   "audio": {"track_id": "...", "reason": "...", "trim_start_ms": 0},
   "typography_direction": "...",
+  "quote": {"lines": [[{"text": "...", "bold": false, "underline": false, "tone": "white"}]]},
   "voiceover": null,
   "captions": {"short": "...", "long": "..."},
   "hashtags": ["...", ...]

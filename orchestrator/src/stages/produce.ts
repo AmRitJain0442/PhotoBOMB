@@ -45,6 +45,28 @@ const PLAN_RESPONSE_SCHEMA = {
       required: ['track_id', 'reason'],
     },
     typography_direction: {type: 'STRING'},
+    quote: {
+      type: 'OBJECT',
+      properties: {
+        lines: {
+          type: 'ARRAY',
+          items: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                text: {type: 'STRING'},
+                bold: {type: 'BOOLEAN'},
+                underline: {type: 'BOOLEAN'},
+                tone: {type: 'STRING', enum: ['white', 'yellow']},
+              },
+              required: ['text'],
+            },
+          },
+        },
+      },
+      required: ['lines'],
+    },
     voiceover: {type: 'STRING', nullable: true},
     captions: {
       type: 'OBJECT',
@@ -53,7 +75,7 @@ const PLAN_RESPONSE_SCHEMA = {
     },
     hashtags: {type: 'ARRAY', items: {type: 'STRING'}},
   },
-  required: ['story', 'mode', 'duration_ms', 'selects', 'audio', 'captions', 'hashtags'],
+  required: ['story', 'mode', 'duration_ms', 'selects', 'audio', 'quote', 'captions', 'hashtags'],
 };
 
 export type ProduceOptions = {
