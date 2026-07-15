@@ -1,21 +1,9 @@
 import React, {useState} from 'react';
 
 import type {RunResultPayload} from './api';
+import {CreateScreen} from './screens/CreateScreen';
 
 export type Phase = 'create' | 'developing' | 'review';
-
-// Placeholder screens — replaced by the real ones in Tasks 9–11.
-const CreatePlaceholder: React.FC<{onStart: () => void}> = ({onStart}) => (
-  <div>
-    <h2 className="screen-title">Make a reel</h2>
-    <p className="screen-sub">Drop in your photos, pick a song, and let Darkroom do the rest.</p>
-    <div className="card">
-      <button className="btn btn-primary" onClick={onStart}>
-        Make my reel
-      </button>
-    </div>
-  </div>
-);
 
 const DevelopingPlaceholder: React.FC<{onDone: () => void}> = ({onDone}) => (
   <div className="develop-room">
@@ -49,7 +37,7 @@ export const App: React.FC = () => {
         <h1>Darkroom</h1>
         <span className="tag">photos in, reel out</span>
       </header>
-      {phase === 'create' && <CreatePlaceholder onStart={() => setPhase('developing')} />}
+      {phase === 'create' && <CreateScreen onStarted={() => setPhase('developing')} />}
       {phase === 'developing' && (
         <DevelopingPlaceholder
           onDone={() => {
