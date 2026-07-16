@@ -67,7 +67,14 @@ export type TrackInfo = {
   feel: string;
 };
 
-export type StageName = 'analyze' | 'produce' | 'direct' | 'finalize';
+export type StageName =
+  | 'analyze'
+  | 'produce'
+  | 'enhance'
+  | 'animate'
+  | 'film'
+  | 'direct'
+  | 'finalize';
 
 export type RunMeta = {
   runId: string;
