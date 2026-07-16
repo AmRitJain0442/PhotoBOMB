@@ -120,6 +120,26 @@ export type DirectOptions = {
   track: TrackInfo;
 };
 
+/** The Director chooses WHERE the quote goes; the plan says WHAT it is.
+ * Live runs showed the model re-defaulting span tones, so copy the plan's
+ * spans onto the quote entry verbatim (a "\n" span separates the lines). */
+export function applyQuoteSpans(edl: Edl, quote: ProductionPlan['quote']): Edl {
+  const spans = quote.lines.flatMap((line, i) =>
+    i === 0
+      ? line
+      : [{text: '\n', bold: false, underline: false, tone: 'white' as const}, ...line],
+  );
+  const content = quote.lines
+    .map((line) => line.map((s) => s.text.trim()).join(' '))
+    .join(' ');
+  return {
+    ...edl,
+    timeline: edl.timeline.map((e) =>
+      e.text?.style === 'quote_duotone' ? {...e, text: {...e.text, content, spans}} : e,
+    ),
+  };
+}
+
 export async function runDirect(
   deps: PipelineDeps,
   opts: DirectOptions,
@@ -162,7 +182,9 @@ export async function runDirect(
     usage.thoughtsTokens += res.usage.thoughtsTokens;
 
     const violations = checkInvariants(res.data, assetIds, cutoutIds);
-    if (violations.length === 0) return {edl: res.data, usage};
+    if (violations.length === 0) {
+      return {edl: applyQuoteSpans(res.data, opts.plan.quote), usage};
+    }
     if (attempt === 1) {
       throw new PipelineError('direct', 'invariants', violations.join('\n'));
     }

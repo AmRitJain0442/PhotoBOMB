@@ -77,14 +77,19 @@ def main(argv, analyze_fn=None, segment_fn=None) -> int:
             client = gemini_vision.make_client()
             segment_fn = lambda pp, s, b: segment.cutout_png(client, pp, s, b)  # noqa: E731
         a = analyses[p]
+        failed = False
         try:
             png = segment_fn(p, a.get("subject", ""), a.get("subject_bbox", []))
         except Exception:
             png = None  # a failed cutout never fails the pipeline
+            failed = True
         if png:
             png_path.write_bytes(png)
         has_cutout[p] = bool(png)
-        cache.put(args.cache, keys[p], CUTOUT_NS, {"has_cutout": has_cutout[p]})
+        if not failed:
+            # only cache real answers — a transient API failure must not
+            # permanently mark the photo as cutout-less
+            cache.put(args.cache, keys[p], CUTOUT_NS, {"has_cutout": has_cutout[p]})
 
     pool = []
     for p in result.survivors:

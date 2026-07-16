@@ -190,3 +190,27 @@ def test_cutout_cache_hit_skips_segment_fn(tmp_path):
     assert run("o3.json") == 0
     assert counter["n"] == 5
     assert (cutouts / "img0.png").exists()
+
+
+def test_segment_failure_is_not_cached(tmp_path):
+    photos = _setup_photos(tmp_path)
+    counter = {"n": 0}
+
+    def boom(path, subject, bbox):
+        counter["n"] += 1
+        raise RuntimeError("transient network failure")
+
+    def run(out, seg):
+        return main(
+            ["--photos", str(photos), "--cache", str(tmp_path / "cache"),
+             "--out", str(tmp_path / out), "--cutouts", str(tmp_path / "cutouts")],
+            analyze_fn=lambda paths: _canned(paths), segment_fn=seg,
+        )
+
+    assert run("o1.json", boom) == 0  # failures never fail the pipeline
+    pool = json.loads((tmp_path / "o1.json").read_text(encoding="utf-8"))["pool"]
+    assert all(e["has_cutout"] is False for e in pool)
+    assert counter["n"] == 4
+    # a later run retries — the failure was not cached as "no cutout"
+    assert run("o2.json", boom) == 0
+    assert counter["n"] == 8
