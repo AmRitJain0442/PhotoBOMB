@@ -67,6 +67,23 @@ def test_full_frame_subject_skips_the_api_entirely(tmp_path):
     assert segment.bbox_area_frac("garbage") == 0.0
 
 
+def test_first_mask_strips_markdown_fences():
+    mask_b64 = base64.b64encode(_mask_png(4, 4)).decode()
+    text = f'```json\n[{{"box_2d": [1, 2, 3, 4], "mask": "{mask_b64}"}}]\n```'
+    parsed = segment.first_mask(text)
+    assert parsed is not None
+    assert parsed[0] == [1, 2, 3, 4]
+
+
+def test_first_mask_tolerates_missing_base64_padding():
+    raw = _mask_png(4, 4)
+    unpadded = base64.b64encode(raw).decode().rstrip("=")
+    text = json.dumps([{"box_2d": [0, 0, 500, 500], "mask": unpadded}])
+    parsed = segment.first_mask(text)
+    assert parsed is not None
+    assert parsed[1] == raw
+
+
 def test_first_mask_absent_or_malformed():
     assert segment.first_mask("[]") is None
     assert segment.first_mask("not json") is None

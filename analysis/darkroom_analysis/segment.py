@@ -10,16 +10,17 @@ the API wrapper stays thin, like gemini_vision.analyze_batch.
 import base64
 import io
 import json
+import re
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 MODEL = "gemini-2.5-flash"
 MIN_AREA_FRAC = 0.03
 MAX_AREA_FRAC = 0.90
 MASK_THRESHOLD = 127
 PAD_PX = 16
-SEND_MAX_PX = 768  # downscale before sending: keeps the returned mask small
+SEND_MAX_PX = 512  # downscale before sending: keeps the returned mask small
 
 _PROMPT = (
     "Give the segmentation mask for the {subject} (the photo's main subject; "
@@ -33,9 +34,12 @@ _PROMPT = (
 
 def first_mask(response_text):
     """Parse the model's JSON -> (box_2d, mask_png_bytes), or None."""
+    if not isinstance(response_text, str):
+        return None
+    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", response_text.strip())
     try:
-        items = json.loads(response_text)
-    except (json.JSONDecodeError, TypeError):
+        items = json.loads(text)
+    except json.JSONDecodeError:
         return None
     if not isinstance(items, list) or not items:
         return None
@@ -44,8 +48,10 @@ def first_mask(response_text):
     mask = item.get("mask")
     if not isinstance(box, list) or len(box) != 4 or not isinstance(mask, str):
         return None
+    mask = mask.strip()
     if "," in mask:  # strip a data:image/png;base64, prefix
         mask = mask.split(",", 1)[1]
+    mask += "=" * (-len(mask) % 4)  # the model often omits base64 padding
     try:
         return box, base64.b64decode(mask)
     except Exception:
@@ -96,13 +102,15 @@ def bbox_area_frac(subject_bbox):
 
 
 def _send_bytes(photo_path):
-    """Downscaled JPEG for the API call — a near-full-resolution mask would
-    blow the output token budget."""
+    """Downscaled, lightly smoothed JPEG for the API call — big or noisy
+    inputs make the model emit masks too large for the output token budget.
+    The mask is composited against the ORIGINAL photo, so this loses nothing."""
     photo = Image.open(photo_path).convert("RGB")
     if max(photo.size) > SEND_MAX_PX:
         photo.thumbnail((SEND_MAX_PX, SEND_MAX_PX))
+    photo = photo.filter(ImageFilter.GaussianBlur(1.5))
     buf = io.BytesIO()
-    photo.save(buf, format="JPEG", quality=88)
+    photo.save(buf, format="JPEG", quality=80)
     return buf.getvalue()
 
 
@@ -117,29 +125,34 @@ def cutout_png(client, photo_path, subject, subject_bbox):
     if bbox_area_frac(subject_bbox) >= MAX_AREA_FRAC:
         return None
 
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=[
-            types.Content(
-                role="user",
-                parts=[
-                    types.Part.from_text(
-                        text=_PROMPT.format(subject=subject or "main subject", bbox=subject_bbox)
-                    ),
-                    types.Part.from_bytes(data=_send_bytes(photo_path), mime_type="image/jpeg"),
-                ],
-            )
-        ],
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            # base64 masks are token-hungry: give plenty of room and skip
-            # thinking (Google's guidance for 2.5 segmentation)
-            max_output_tokens=49152,
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-        ),
-    )
-    parsed = first_mask(response.text)
-    if parsed is None:
-        return None
-    box_2d, mask_bytes = parsed
-    return compose_cutout(photo_path, box_2d, mask_bytes)
+    send = _send_bytes(photo_path)
+    # NO response_mime_type here: forced-JSON mode makes the model emit huge
+    # raw masks that truncate at MAX_TOKENS; plain text yields compact
+    # fenced-JSON palette masks. Retry twice — mask size is nondeterministic.
+    for _ in range(2):
+        response = client.models.generate_content(
+            model=MODEL,
+            contents=[
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_text(
+                            text=_PROMPT.format(
+                                subject=subject or "main subject", bbox=subject_bbox
+                            )
+                        ),
+                        types.Part.from_bytes(data=send, mime_type="image/jpeg"),
+                    ],
+                )
+            ],
+            config=types.GenerateContentConfig(
+                # skip thinking (Google's guidance for 2.5 segmentation)
+                max_output_tokens=65535,
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
+            ),
+        )
+        parsed = first_mask(response.text)
+        if parsed is not None:
+            box_2d, mask_bytes = parsed
+            return compose_cutout(photo_path, box_2d, mask_bytes)
+    return None
