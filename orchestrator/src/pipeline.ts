@@ -12,7 +12,7 @@ import {
   type RunMeta,
   type StageName,
 } from './contracts.js';
-import {MODELS, type GeminiTransport} from './gemini.js';
+import {MODELS, type GeminiTransport, type ModelRef} from './gemini.js';
 import {runDir} from './paths.js';
 import {runAnalyze} from './stages/analyze.js';
 import {chooseTrackSet, loadTracks} from './stages/audio.js';
@@ -26,7 +26,7 @@ export type Progress = (stage: StageName, state: 'running' | 'done') => void;
 export type PipelineDeps = {
   transport: GeminiTransport;
   repoRoot: string;
-  directorModel: string;
+  directorModel: ModelRef;
   spawnPy: (script: string, args: string[]) => Promise<{code: number; stdout: string}>;
 };
 
@@ -42,7 +42,7 @@ export type Avoid = {track_id?: string; summary?: string};
 
 const newRunId = (): string => `p${Date.now()}${Math.random().toString(36).slice(2, 5)}`;
 
-export function resolveDirectorModel(env: Record<string, string | undefined>): string {
+export function resolveDirectorModel(env: Record<string, string | undefined>): ModelRef {
   return env.DARKROOM_DIRECTOR_MODEL === 'pro' ? MODELS.pro : MODELS.flash;
 }
 

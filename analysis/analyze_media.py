@@ -72,9 +72,9 @@ def main(argv, analyze_fn=None, segment_fn=None) -> int:
             has_cutout[p] = hit["has_cutout"]
             continue
         if segment_fn is None:
-            from darkroom_analysis import gemini_vision, segment
+            from darkroom_analysis import segment
 
-            client = gemini_vision.make_client()
+            client = segment.make_client()
             segment_fn = lambda pp, s, b: segment.cutout_png(client, pp, s, b)  # noqa: E731
         a = analyses[p]
         failed = False

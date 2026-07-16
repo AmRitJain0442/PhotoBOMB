@@ -43,7 +43,7 @@ export async function runFinalize(deps: PipelineDeps, opts: FinalizeOptions): Pr
     runId: opts.runId,
     created_at: new Date().toISOString(),
     track_id: opts.track.id,
-    director_model: deps.directorModel,
+    director_model: deps.directorModel.id,
     usage: opts.usage,
     avoid: opts.avoid ?? null,
   };

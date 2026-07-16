@@ -174,7 +174,10 @@ describe('revisePipeline', () => {
 
 describe('resolveDirectorModel', () => {
   it('defaults to flash, pro on env opt-in', () => {
-    expect(resolveDirectorModel({})).toBe('gemini-2.5-flash');
-    expect(resolveDirectorModel({DARKROOM_DIRECTOR_MODEL: 'pro'})).toBe('gemini-2.5-pro');
+    expect(resolveDirectorModel({})).toEqual({id: 'gemini-3-flash-preview', location: 'global'});
+    expect(resolveDirectorModel({DARKROOM_DIRECTOR_MODEL: 'pro'})).toEqual({
+      id: 'gemini-2.5-pro',
+      location: 'us-central1',
+    });
   });
 });

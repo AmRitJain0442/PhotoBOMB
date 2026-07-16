@@ -35,7 +35,7 @@ describe('runDirect', () => {
     const res = await runDirect(deps, {plan: PLAN, mediaPool: MEDIA_POOL, track: TRACKS[0]});
     expect(res.edl.timeline).toHaveLength(4);
     expect(calls[0].system).toContain('director system prompt');
-    expect(calls[0].model).toBe('gemini-2.5-flash');
+    expect(calls[0].model).toEqual({id: 'gemini-3-flash-preview', location: 'global'});
   });
 
   it('repairs an invariant-violating EDL (cut off the beat grid)', async () => {
@@ -117,8 +117,11 @@ describe('runDirect', () => {
 
   it('uses the configured director model', async () => {
     const {transport, calls} = makeTransport([JSON.stringify(goodEdl())]);
-    const deps = {...makeDeps(root, transport), directorModel: 'gemini-2.5-pro'};
+    const deps = {
+      ...makeDeps(root, transport),
+      directorModel: {id: 'gemini-2.5-pro', location: 'us-central1'},
+    };
     await runDirect(deps, {plan: PLAN, mediaPool: MEDIA_POOL, track: TRACKS[0]});
-    expect(calls[0].model).toBe('gemini-2.5-pro');
+    expect(calls[0].model).toEqual({id: 'gemini-2.5-pro', location: 'us-central1'});
   });
 });

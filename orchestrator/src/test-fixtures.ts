@@ -4,7 +4,7 @@ import {mkdir, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 
 import type {MediaPool, ProductionPlan, TrackInfo} from './contracts.js';
-import type {GeminiRequest, GeminiTransport, GeminiUsage} from './gemini.js';
+import {MODELS, type GeminiRequest, type GeminiTransport, type GeminiUsage} from './gemini.js';
 import type {PipelineDeps} from './pipeline.js';
 
 export const USAGE: GeminiUsage = {inputTokens: 10, outputTokens: 5, thoughtsTokens: 2};
@@ -154,6 +154,6 @@ export const makeDeps = (
 ): PipelineDeps => ({
   transport,
   repoRoot: root,
-  directorModel: 'gemini-2.5-flash',
+  directorModel: MODELS.flash,
   spawnPy,
 });
