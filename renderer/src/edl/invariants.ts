@@ -11,11 +11,17 @@ const nearBeat = (ms: number, grid: number[]): boolean =>
 // Hard invariants beyond Zod's reach (Tech Spec §6). Returns human-readable
 // violations — empty array means valid. Messages are fed back to the Director
 // repair loop verbatim, so keep them specific.
+export type InvariantExtras = {
+  cutoutIds?: Set<string>;
+  clipDurations?: Map<string, number>;
+};
+
 export const checkInvariants = (
   edl: Edl,
   assetIds: Set<string>,
-  cutoutIds?: Set<string>,
+  extras: InvariantExtras = {},
 ): string[] => {
+  const {cutoutIds, clipDurations} = extras;
   const errors: string[] = [];
   const t = edl.timeline;
 
@@ -38,6 +44,18 @@ export const checkInvariants = (
       errors.push(
         `entry ${i} uses a cutout_pop transition but asset "${e.asset}" has no cutout — use a plain cut there`,
       );
+    }
+    if ((e.kind === 'clip' || e.kind === 'veo') && clipDurations) {
+      const dur = clipDurations.get(e.asset);
+      if (dur === undefined) {
+        errors.push(
+          `entry ${i} is kind "${e.kind}" but asset "${e.asset}" has no generated clip — use kind "still"`,
+        );
+      } else if (e.end_ms - e.start_ms > dur) {
+        errors.push(
+          `entry ${i} clip runs ${e.end_ms - e.start_ms}ms but the clip is only ${dur}ms long`,
+        );
+      }
     }
     if (e.text) {
       const entryLen = e.end_ms - e.start_ms;

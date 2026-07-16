@@ -234,7 +234,9 @@
       },
       {
         "asset": "IMG_009",
-        "kind": "still",
+        "kind": "clip",
+        "clip_path": "assets/clips/IMG_009.mp4",
+        "clip_duration_ms": 1000,
         "start_ms": 8000,
         "end_ms": 9000,
         "motion": {

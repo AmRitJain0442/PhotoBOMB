@@ -17,4 +17,5 @@ test('fixture exercises the dynamic-edit vocabulary', () => {
   expect(edl.timeline.some((e) => e.transition_out?.type === 'cutout_pop' && e.cutout)).toBe(
     true,
   );
+  expect(edl.timeline.some((e) => e.kind === 'clip' && e.clip_path)).toBe(true);
 });

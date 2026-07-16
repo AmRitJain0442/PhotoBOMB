@@ -181,7 +181,7 @@ export async function runDirect(
     usage.outputTokens += res.usage.outputTokens;
     usage.thoughtsTokens += res.usage.thoughtsTokens;
 
-    const violations = checkInvariants(res.data, assetIds, cutoutIds);
+    const violations = checkInvariants(res.data, assetIds, {cutoutIds});
     if (violations.length === 0) {
       return {edl: applyQuoteSpans(res.data, opts.plan.quote), usage};
     }

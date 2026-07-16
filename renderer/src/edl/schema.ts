@@ -83,6 +83,10 @@ export const TimelineEntrySchema = z.object({
   text: TextSchema.optional(),
   // cutout PNG path — patched by finalize, never written by the Director
   cutout: z.string().optional(),
+  // generated video for clip/veo entries — BOTH patched by finalize from the
+  // animate/film results, never written by the Director
+  clip_path: z.string().optional(),
+  clip_duration_ms: z.number().int().positive().optional(),
 });
 
 export const EdlSchema = z.object({

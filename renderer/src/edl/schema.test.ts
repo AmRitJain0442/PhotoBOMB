@@ -124,6 +124,22 @@ describe('EdlSchema', () => {
     expect(() => EdlSchema.parse(edl)).toThrow();
   });
 
+  test('accepts a clip entry with clip_path and duration; rejects zero duration', () => {
+    const edl = structuredClone(validEdl) as Record<string, any>;
+    edl.timeline[1] = {
+      asset: 'IMG_002',
+      kind: 'clip',
+      start_ms: 1000,
+      end_ms: 2000,
+      clip_path: 'assets/clips/IMG_002.mp4',
+      clip_duration_ms: 6000,
+    };
+    const parsed = EdlSchema.parse(edl);
+    expect(parsed.timeline[1].clip_path).toBe('assets/clips/IMG_002.mp4');
+    edl.timeline[1].clip_duration_ms = 0;
+    expect(() => EdlSchema.parse(edl)).toThrow();
+  });
+
   test('accepts speed ramps on clips', () => {
     const withClip = structuredClone(validEdl) as Record<string, any>;
     withClip.timeline[1] = {

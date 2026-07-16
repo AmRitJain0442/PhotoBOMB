@@ -1,5 +1,13 @@
 import React from 'react';
-import {AbsoluteFill, Audio, Img, Sequence, staticFile, useCurrentFrame} from 'remotion';
+import {
+  AbsoluteFill,
+  Audio,
+  Img,
+  OffthreadVideo,
+  Sequence,
+  staticFile,
+  useCurrentFrame,
+} from 'remotion';
 import type {Edl, TimelineEntry} from './edl/schema';
 import {msToFrame} from './edl/time';
 import {KenBurns} from './components/KenBurns';
@@ -19,14 +27,22 @@ const Shot: React.FC<{
   beatGridMs: number[];
   fps: number;
   settleIn: boolean;
-}> = ({entry, src, beatGridMs, fps, settleIn}) => {
+  edlHasTrack: boolean;
+}> = ({entry, src, beatGridMs, fps, settleIn, edlHasTrack}) => {
   const frame = useCurrentFrame();
   const durF = msToFrame(entry.end_ms, fps) - msToFrame(entry.start_ms, fps);
   const settleF = msToFrame(SETTLE_MS, fps);
   const scale = settleIn ? settleScaleAt(settleF <= 0 ? 1 : Math.min(1, frame / settleF)) : 1;
   return (
     <AbsoluteFill style={{transform: `scale(${scale})`}}>
-      {entry.effects.includes('quote_card') ? (
+      {(entry.kind === 'clip' || entry.kind === 'veo') && entry.clip_path ? (
+        // generated clip; the song owns the soundtrack unless the EDL has none
+        <OffthreadVideo
+          src={staticFile(entry.clip_path)}
+          muted={edlHasTrack}
+          style={{width: '100%', height: '100%', objectFit: 'cover'}}
+        />
+      ) : entry.effects.includes('quote_card') ? (
         <QuoteCardBackdrop src={src} durationInFrames={durF} />
       ) : entry.motion && entry.motion.type === 'ken_burns' ? (
         <KenBurns src={src} motion={entry.motion} durationInFrames={durF} />
@@ -65,6 +81,7 @@ export const Reel: React.FC<ReelProps> = ({edl, assets}) => {
               beatGridMs={edl.audio.beat_grid_ms}
               fps={fps}
               settleIn={settleIn}
+              edlHasTrack={edl.audio.track !== null}
             />
           </Sequence>
         );

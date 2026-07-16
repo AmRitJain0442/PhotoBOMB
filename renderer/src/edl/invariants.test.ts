@@ -87,8 +87,33 @@ describe('checkInvariants', () => {
   test('flags cutout_pop from an asset without a cutout', () => {
     const edl = base();
     edl.timeline[0].transition_out = {type: 'cutout_pop', duration_ms: 400};
-    expect(checkInvariants(edl, assets, new Set(['B'])).join(' ')).toMatch(/cutout/i);
-    expect(checkInvariants(edl, assets, new Set(['A']))).toEqual([]);
+    expect(
+      checkInvariants(edl, assets, {cutoutIds: new Set(['B'])}).join(' '),
+    ).toMatch(/cutout/i);
+    expect(checkInvariants(edl, assets, {cutoutIds: new Set(['A'])})).toEqual([]);
+  });
+
+  test('clip entries must fit inside their generated clip', () => {
+    const edl = base();
+    edl.timeline[0].kind = 'clip';
+    const short = new Map([['A', 800]]);
+    expect(checkInvariants(edl, assets, {clipDurations: short}).join(' ')).toMatch(/clip/i);
+    const long = new Map([['A', 1500]]);
+    expect(checkInvariants(edl, assets, {clipDurations: long})).toEqual([]);
+  });
+
+  test('clip entries without a generated clip are violations', () => {
+    const edl = base();
+    edl.timeline[1].kind = 'clip';
+    expect(
+      checkInvariants(edl, assets, {clipDurations: new Map([['A', 1500]])}).join(' '),
+    ).toMatch(/still/i);
+  });
+
+  test('clip rules are skipped when no clip map is provided', () => {
+    const edl = base();
+    edl.timeline[0].kind = 'clip';
+    expect(checkInvariants(edl, assets)).toEqual([]);
   });
 
   test('cutout_pop is unchecked when no cutout set is provided', () => {
