@@ -13,3 +13,7 @@ export const rendererAudioDir = (root: string): string =>
   path.join(root, 'renderer', 'public', 'assets', 'audio');
 export const rendererCutoutsDir = (root: string): string =>
   path.join(root, 'renderer', 'public', 'assets', 'cutouts');
+export const rendererEnhancedDir = (root: string): string =>
+  path.join(root, 'renderer', 'public', 'assets', 'enhanced');
+export const rendererClipsDir = (root: string): string =>
+  path.join(root, 'renderer', 'public', 'assets', 'clips');
