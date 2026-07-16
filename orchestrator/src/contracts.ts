@@ -76,6 +76,13 @@ export type StageName =
   | 'direct'
   | 'finalize';
 
+export type DerivedMedia = {
+  style: ReelStyle;
+  enhance: boolean;
+  enhanced: Record<string, string>; // id -> renderer-relative graded path
+  clips: Record<string, {file: string; duration_ms: number}>;
+};
+
 export type RunMeta = {
   runId: string;
   created_at: string;
@@ -83,6 +90,7 @@ export type RunMeta = {
   director_model: string;
   usage: Record<string, GeminiUsage>;
   avoid: {track_id?: string; summary?: string} | null;
+  derived: DerivedMedia;
 };
 
 export class PipelineError extends Error {

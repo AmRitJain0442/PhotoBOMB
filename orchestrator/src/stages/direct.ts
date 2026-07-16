@@ -34,7 +34,7 @@ const EDL_RESPONSE_SCHEMA = {
         type: 'OBJECT',
         properties: {
           asset: {type: 'STRING'},
-          kind: {type: 'STRING', enum: ['still']},
+          kind: {type: 'STRING', enum: ['still', 'clip']},
           start_ms: {type: 'INTEGER'},
           end_ms: {type: 'INTEGER'},
           motion: {
@@ -118,6 +118,8 @@ export type DirectOptions = {
   plan: ProductionPlan;
   mediaPool: MediaPool;
   track: TrackInfo;
+  /** hero clips from the animate stage — the Director may cut these as kind "clip" */
+  clips?: Map<string, {file: string; durationMs: number}>;
 };
 
 /** The Director chooses WHERE the quote goes; the plan says WHAT it is.
@@ -146,8 +148,11 @@ export async function runDirect(
 ): Promise<{edl: Edl; usage: GeminiUsage}> {
   const system = await readFile(promptPath(deps.repoRoot, 'director_montage.md'), 'utf8');
 
+  const clips = opts.clips ?? new Map<string, {file: string; durationMs: number}>();
   const selects = new Set(opts.plan.selects);
-  const selectedPool = opts.mediaPool.pool.filter((e) => selects.has(e.id));
+  const selectedPool = opts.mediaPool.pool
+    .filter((e) => selects.has(e.id))
+    .map((e) => (clips.has(e.id) ? {...e, clip: {duration_ms: clips.get(e.id)!.durationMs}} : e));
   const trackForDirector = {
     track: `assets/audio/${opts.track.file}`,
     bpm: opts.track.bpm,
@@ -163,6 +168,7 @@ export async function runDirect(
 
   const assetIds = new Set([...opts.plan.selects, opts.track.id]);
   const cutoutIds = new Set(opts.mediaPool.pool.filter((e) => e.has_cutout).map((e) => e.id));
+  const clipDurations = new Map([...clips].map(([id, c]) => [id, c.durationMs]));
   const usage: GeminiUsage = {inputTokens: 0, outputTokens: 0, thoughtsTokens: 0};
   let repairParts: {text: string}[] = [];
 
@@ -181,7 +187,7 @@ export async function runDirect(
     usage.outputTokens += res.usage.outputTokens;
     usage.thoughtsTokens += res.usage.thoughtsTokens;
 
-    const violations = checkInvariants(res.data, assetIds, {cutoutIds});
+    const violations = checkInvariants(res.data, assetIds, {cutoutIds, clipDurations});
     if (violations.length === 0) {
       return {edl: applyQuoteSpans(res.data, opts.plan.quote), usage};
     }

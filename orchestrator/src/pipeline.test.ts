@@ -7,6 +7,7 @@ import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import {PipelineError, type StageName} from './contracts.js';
 import {resolveDirectorModel, revisePipeline, runPipeline} from './pipeline.js';
 import {
+  LIVE_PLAN,
   MEDIA_POOL,
   PLAN,
   fakeSpawnPy,
@@ -106,6 +107,113 @@ describe('runPipeline', () => {
         return true;
       },
     );
+  });
+});
+
+// Routes worker scripts: analyze writes the pool, the media workers answer
+// with canned JSON so styles can be tested without any API.
+const routeSpawnPy =
+  (opts: {enhanced?: Record<string, string | null>; clipDuration?: number; filmDuration?: number}) =>
+  async (script: string, args: string[]) => {
+    if (script.includes('analyze_media')) return fakeSpawnPy()(script, args);
+    if (script.includes('enhance_photos')) {
+      return {code: 0, stdout: JSON.stringify({enhanced: opts.enhanced ?? {}})};
+    }
+    if (script.includes('animate_clip')) {
+      return opts.clipDuration
+        ? {code: 0, stdout: JSON.stringify({duration_ms: opts.clipDuration})}
+        : {code: 4, stdout: '{"error":"no_clip"}'};
+    }
+    if (script.includes('film_video')) {
+      return opts.filmDuration
+        ? {code: 0, stdout: JSON.stringify({duration_ms: opts.filmDuration})}
+        : {code: 4, stdout: '{"error":"no_film"}'};
+    }
+    return {code: 1, stdout: `unknown script ${script}`};
+  };
+
+const liveEdl = () => {
+  const edl = goodEdl();
+  (edl.timeline[0] as Record<string, unknown>).kind = 'clip';
+  return edl;
+};
+
+describe('styles', () => {
+  it('live: animates heroes, directs with clip info, patches clip paths', async () => {
+    const {transport, calls} = makeTransport([
+      JSON.stringify(LIVE_PLAN),
+      JSON.stringify(liveEdl()),
+    ]);
+    const deps = {...makeDeps(root, transport), spawnPy: routeSpawnPy({clipDuration: 6200})};
+    const {events, onProgress} = collectProgress();
+
+    const result = await runPipeline({photosDir, track: 'auto', style: 'live', deps}, onProgress);
+
+    expect(events).toContain('animate:running');
+    const directText = calls[1].parts.map((p) => p.text).join('\n');
+    expect(directText).toContain('"duration_ms":6200');
+    expect(result.edl.timeline[0].kind).toBe('clip');
+    expect(result.edl.timeline[0].clip_path).toBe('assets/clips/img0.mp4');
+    expect(result.edl.timeline[0].clip_duration_ms).toBe(6200);
+    expect(result.assetPaths.img1).toBe('assets/img1.jpg');
+    expect(result.meta.derived.clips.img0).toEqual({file: 'img0.mp4', duration_ms: 6200});
+  });
+
+  it('enhance: swaps asset paths to graded files, degrades per photo', async () => {
+    const {transport} = makeTransport([JSON.stringify(PLAN), JSON.stringify(goodEdl())]);
+    const deps = {
+      ...makeDeps(root, transport),
+      spawnPy: routeSpawnPy({enhanced: {img0: 'img0.jpg', img1: null}}),
+    };
+    const {events, onProgress} = collectProgress();
+
+    const result = await runPipeline(
+      {photosDir, track: 'auto', enhance: true, deps},
+      onProgress,
+    );
+
+    expect(events).toContain('enhance:running');
+    expect(result.assetPaths.img0).toBe('assets/enhanced/img0.jpg');
+    expect(result.assetPaths.img1).toBe('assets/img1.jpg');
+    expect(result.meta.derived.enhance).toBe(true);
+  });
+
+  it('film: one-entry narrative EDL carrying its own audio', async () => {
+    const filmPlan = {...PLAN, film_prompt: 'A dusk story in one take.'};
+    const {transport, calls} = makeTransport([JSON.stringify(filmPlan)]);
+    const deps = {...makeDeps(root, transport), spawnPy: routeSpawnPy({filmDuration: 11000})};
+    const {events, onProgress} = collectProgress();
+
+    const result = await runPipeline({photosDir, track: 'auto', style: 'film', deps}, onProgress);
+
+    expect(events).toContain('film:running');
+    expect(events.join(',')).not.toContain('direct');
+    expect(calls).toHaveLength(1); // producer only — no director call
+    expect(result.edl.mode).toBe('narrative');
+    expect(result.edl.audio.track).toBeNull();
+    expect(result.edl.audio.mute_render).toBe(false);
+    expect(result.edl.timeline).toHaveLength(1);
+    expect(result.edl.timeline[0].kind).toBe('veo');
+    expect(result.edl.timeline[0].end_ms).toBe(11000);
+    expect(result.assetPaths.film).toBe(`assets/clips/film-${result.runId}.mp4`);
+    expect(result.meta.derived.style).toBe('film');
+  });
+
+  it('film runs cannot be revised — only re-taken', async () => {
+    const filmPlan = {...PLAN, film_prompt: 'A dusk story.'};
+    const {transport} = makeTransport([JSON.stringify(filmPlan)]);
+    const deps = {...makeDeps(root, transport), spawnPy: routeSpawnPy({filmDuration: 11000})};
+    const {onProgress} = collectProgress();
+    const first = await runPipeline({photosDir, track: 'auto', style: 'film', deps}, onProgress);
+
+    const {transport: t2} = makeTransport([]);
+    const deps2 = makeDeps(root, t2);
+    await expect(
+      revisePipeline({runId: first.runId, pin: 'songb', deps: deps2}, onProgress),
+    ).rejects.toSatisfy((e: unknown) => {
+      expect((e as PipelineError).code).toBe('film_no_tweaks');
+      return true;
+    });
   });
 });
 
