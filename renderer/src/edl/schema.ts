@@ -10,16 +10,34 @@ export const TransitionTypeEnum = z.enum([
   'flash_black',
   'zoom_punch',
   'slide',
+  'cutout_pop',
 ]);
-export const EffectEnum = z.enum(['film_grain', 'vignette', 'chromatic_ab', 'vhs', 'bw']);
+export const EffectEnum = z.enum([
+  'film_grain',
+  'vignette',
+  'chromatic_ab',
+  'vhs',
+  'bw',
+  'quote_card',
+]);
 export const TextStyleEnum = z.enum([
   'caption_lower',
   'editorial_serif',
   'kinetic_word',
   'location_stamp',
   'vhs_timestamp',
+  'quote_duotone',
   'none',
 ]);
+
+// Duotone quote spans (spec 2026-07-15 §3/§4). Shared with the Producer's
+// plan contract — the orchestrator imports this schema.
+export const SpanSchema = z.object({
+  text: z.string().min(1),
+  bold: z.boolean().default(false),
+  underline: z.boolean().default(false),
+  tone: z.enum(['white', 'yellow']).default('white'),
+});
 export const AnchorEnum = z.enum(['lower_third', 'center', 'upper_safe', 'corner_br']);
 export const EasingEnum = z.enum(['linear', 'easeInCubic', 'easeOutCubic', 'easeInOutCubic']);
 
@@ -43,6 +61,8 @@ export const TextSchema = z.object({
   in_ms: z.number().int().nonnegative(),
   out_ms: z.number().int().positive(),
   anchor: AnchorEnum,
+  // quote_duotone only; absent -> renderer draws content as one white line
+  spans: z.array(SpanSchema).optional(),
 });
 
 const SpeedRampSchema = z.array(
@@ -61,6 +81,8 @@ export const TimelineEntrySchema = z.object({
     .optional(),
   effects: z.array(EffectEnum).default([]),
   text: TextSchema.optional(),
+  // cutout PNG path — patched by finalize, never written by the Director
+  cutout: z.string().optional(),
 });
 
 export const EdlSchema = z.object({
@@ -82,5 +104,6 @@ export type Edl = z.infer<typeof EdlSchema>;
 export type TimelineEntry = z.infer<typeof TimelineEntrySchema>;
 export type TextSpec = z.infer<typeof TextSchema>;
 export type KenBurnsMotion = z.infer<typeof MotionSchema>;
+export type QuoteSpan = z.infer<typeof SpanSchema>;
 export type Anchor = z.infer<typeof AnchorEnum>;
 export type EasingName = z.infer<typeof EasingEnum>;

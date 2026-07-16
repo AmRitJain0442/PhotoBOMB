@@ -189,6 +189,17 @@ describe('asset deletion', () => {
     const list = await (await fetch(base + '/api/assets')).json();
     expect(list.find((a) => a.file === 'pic.jpg')).toBeUndefined();
   });
+
+  it('deletes the photo cutout alongside the photo', async () => {
+    await boot();
+    const assets = path.join(rendererRoot, 'public', 'assets');
+    await writeFile(path.join(assets, 'pic.jpg'), 'x');
+    await mkdir(path.join(assets, 'cutouts'), {recursive: true});
+    await writeFile(path.join(assets, 'cutouts', 'pic.png'), 'cutout');
+    const r = await fetch(base + '/api/assets/pic.jpg', {method: 'DELETE'});
+    expect(r.status).toBe(204);
+    await expect(readFile(path.join(assets, 'cutouts', 'pic.png'))).rejects.toThrow();
+  });
 });
 
 describe('audio library', () => {

@@ -70,6 +70,60 @@ describe('EdlSchema', () => {
     expect(() => EdlSchema.parse({...validEdl, fps: 24})).toThrow();
   });
 
+  test('accepts cutout_pop transition and an entry cutout path', () => {
+    const edl = structuredClone(validEdl) as Record<string, any>;
+    edl.timeline[0].transition_out = {type: 'cutout_pop', duration_ms: 400};
+    edl.timeline[0].cutout = 'assets/cutouts/IMG_001.png';
+    expect(() => EdlSchema.parse(edl)).not.toThrow();
+  });
+
+  test('accepts a duotone quote with spans, applying emphasis defaults', () => {
+    const edl = structuredClone(validEdl) as Record<string, any>;
+    edl.timeline[1].text = {
+      content: 'stay for the light',
+      style: 'quote_duotone',
+      in_ms: 100,
+      out_ms: 900,
+      anchor: 'center',
+      spans: [{text: 'stay for the'}, {text: 'light', bold: true, tone: 'yellow'}],
+    };
+    const parsed = EdlSchema.parse(edl);
+    expect(parsed.timeline[1].text?.spans?.[0]).toEqual({
+      text: 'stay for the',
+      bold: false,
+      underline: false,
+      tone: 'white',
+    });
+    expect(parsed.timeline[1].text?.spans?.[1].bold).toBe(true);
+  });
+
+  test('quote_duotone without spans is valid (plain white fallback)', () => {
+    const edl = structuredClone(validEdl) as Record<string, any>;
+    edl.timeline[1].text = {
+      content: 'stay',
+      style: 'quote_duotone',
+      in_ms: 0,
+      out_ms: 500,
+      anchor: 'center',
+    };
+    expect(() => EdlSchema.parse(edl)).not.toThrow();
+  });
+
+  test('rejects a bad span tone and accepts quote_card effect', () => {
+    const edl = structuredClone(validEdl) as Record<string, any>;
+    edl.timeline[0].effects = ['quote_card'];
+    expect(() => EdlSchema.parse(edl)).not.toThrow();
+    edl.timeline[0].text = {
+      content: 'x',
+      style: 'quote_duotone',
+      in_ms: 0,
+      out_ms: 500,
+      anchor: 'center',
+      spans: [{text: 'x', tone: 'red'}],
+    };
+    expect(() => EdlSchema.parse(edl)).toThrow();
+  });
+
   test('accepts speed ramps on clips', () => {
     const withClip = structuredClone(validEdl) as Record<string, any>;
     withClip.timeline[1] = {

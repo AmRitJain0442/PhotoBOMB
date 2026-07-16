@@ -76,6 +76,8 @@ export function createApp({pipelineImpl, ingestImpl, checkCredentials, roots}) {
       return res.status(404).end();
     }
     unlinkSync(p);
+    const cutout = join(assetsDir, 'cutouts', `${f.replace(/\.[^.]+$/, '')}.png`);
+    if (existsSync(cutout)) unlinkSync(cutout);
     res.status(204).end();
   });
 

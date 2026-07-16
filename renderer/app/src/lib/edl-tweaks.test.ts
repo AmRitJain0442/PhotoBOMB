@@ -51,6 +51,37 @@ describe('setText', () => {
     expect(() => EdlSchema.parse(next)).not.toThrow();
   });
 
+  it('rewording a quote collapses spans to a single white span', () => {
+    const edl = makeEdl();
+    const quote = {
+      ...edl,
+      timeline: edl.timeline.map((e, i) =>
+        i === 1
+          ? {
+              ...e,
+              text: {
+                content: 'stay for the light',
+                style: 'quote_duotone' as const,
+                in_ms: 0,
+                out_ms: 400,
+                anchor: 'center' as const,
+                spans: [
+                  {text: 'stay for the', bold: false, underline: false, tone: 'white' as const},
+                  {text: 'light', bold: true, underline: false, tone: 'yellow' as const},
+                ],
+              },
+            }
+          : e,
+      ),
+    };
+    const next = setText(quote, 1, 'blue hour again');
+    expect(next.timeline[1].text?.content).toBe('blue hour again');
+    expect(next.timeline[1].text?.spans).toEqual([
+      {text: 'blue hour again', bold: false, underline: false, tone: 'white'},
+    ]);
+    expect(() => EdlSchema.parse(next)).not.toThrow();
+  });
+
   it('empty string removes the overlay and stays schema-valid', () => {
     const next = setText(makeEdl(), 0, '   ');
     expect(next.timeline[0].text).toBeUndefined();

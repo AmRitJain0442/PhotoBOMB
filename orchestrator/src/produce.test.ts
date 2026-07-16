@@ -6,7 +6,7 @@ import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
 import {PipelineError} from './contracts.js';
 import {chooseTrackSet, loadTracks} from './stages/audio.js';
-import {runProduce} from './stages/produce.js';
+import {ensureYellow, runProduce} from './stages/produce.js';
 import {MEDIA_POOL, PLAN, TRACKS, makeDeps, makeRepo, makeTransport} from './test-fixtures.js';
 
 let root: string;
@@ -18,6 +18,34 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await rm(root, {recursive: true, force: true});
+});
+
+describe('ensureYellow', () => {
+  const span = (text: string, extra: Partial<{bold: boolean; underline: boolean; tone: 'white' | 'yellow'}> = {}) => ({
+    text,
+    bold: false,
+    underline: false,
+    tone: 'white' as const,
+    ...extra,
+  });
+
+  it('leaves a quote with a yellow span untouched', () => {
+    const quote = {lines: [[span('stay'), span('light', {tone: 'yellow'})]]};
+    expect(ensureYellow(quote)).toBe(quote);
+  });
+
+  it('promotes the last emphasized span when everything is white', () => {
+    const quote = {lines: [[span('dusk', {bold: true}), span('settles'), span('softly', {underline: true})]]};
+    const fixed = ensureYellow(quote);
+    expect(fixed.lines[0].map((s) => s.tone)).toEqual(['white', 'white', 'yellow']);
+  });
+
+  it('falls back to the very last span when nothing is emphasized', () => {
+    const quote = {lines: [[span('violet')], [span('city'), span('dreams')]]};
+    const fixed = ensureYellow(quote);
+    expect(fixed.lines[1][1].tone).toBe('yellow');
+    expect(fixed.lines[0][0].tone).toBe('white');
+  });
 });
 
 describe('audio stage', () => {

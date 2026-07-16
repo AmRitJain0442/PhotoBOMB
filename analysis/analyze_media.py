@@ -1,4 +1,4 @@
-"""analyze_media.py --photos <dir> --cache <dir> --out <file> [--batch 10]
+"""analyze_media.py --photos <dir> --cache <dir> --out <file> --cutouts <dir> [--batch 10]
 
 Builds the media_pool JSON (spec 2026-07-14-m1 §3, stills only):
 {"pool": [entry...], "rejects": [{"file", "reason"}]}
@@ -15,6 +15,7 @@ from darkroom_analysis import cache, exif_meta, triage
 
 RASTER_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 NAMESPACE = "vision"
+CUTOUT_NS = "cutout"
 
 
 def _list_photos(photos_dir: str) -> list:
@@ -24,11 +25,12 @@ def _list_photos(photos_dir: str) -> list:
     )
 
 
-def main(argv, analyze_fn=None) -> int:
+def main(argv, analyze_fn=None, segment_fn=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--photos", required=True)
     ap.add_argument("--cache", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--cutouts", required=True)
     ap.add_argument("--batch", type=int, default=10)
     args = ap.parse_args(argv)
 
@@ -60,6 +62,35 @@ def main(argv, analyze_fn=None) -> int:
                 analyses[p] = analysis
                 cache.put(args.cache, keys[p], NAMESPACE, analysis)
 
+    cutouts_dir = Path(args.cutouts)
+    cutouts_dir.mkdir(parents=True, exist_ok=True)
+    has_cutout = {}
+    for p in result.survivors:
+        png_path = cutouts_dir / f"{Path(p).stem}.png"
+        hit = cache.get(args.cache, keys[p], CUTOUT_NS)
+        if hit is not None and (not hit["has_cutout"] or png_path.exists()):
+            has_cutout[p] = hit["has_cutout"]
+            continue
+        if segment_fn is None:
+            from darkroom_analysis import gemini_vision, segment
+
+            client = gemini_vision.make_client()
+            segment_fn = lambda pp, s, b: segment.cutout_png(client, pp, s, b)  # noqa: E731
+        a = analyses[p]
+        failed = False
+        try:
+            png = segment_fn(p, a.get("subject", ""), a.get("subject_bbox", []))
+        except Exception:
+            png = None  # a failed cutout never fails the pipeline
+            failed = True
+        if png:
+            png_path.write_bytes(png)
+        has_cutout[p] = bool(png)
+        if not failed:
+            # only cache real answers — a transient API failure must not
+            # permanently mark the photo as cutout-less
+            cache.put(args.cache, keys[p], CUTOUT_NS, {"has_cutout": has_cutout[p]})
+
     pool = []
     for p in result.survivors:
         analysis = dict(analyses[p])
@@ -73,6 +104,7 @@ def main(argv, analyze_fn=None) -> int:
                 "id": Path(p).stem,
                 "file": Path(p).name,
                 "type": "still",
+                "has_cutout": has_cutout[p],
                 "exif": exif_meta.read(p),
                 "analysis": analysis,
             }

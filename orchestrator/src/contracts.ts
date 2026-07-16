@@ -1,6 +1,7 @@
 // Data contracts between the analysis layer, Gemini stages, and the server.
 import {z} from 'zod';
 
+import {SpanSchema} from '../../renderer/src/edl/schema.js';
 import type {GeminiUsage} from './gemini.js';
 
 export const ProductionPlanSchema = z.object({
@@ -16,6 +17,7 @@ export const ProductionPlanSchema = z.object({
     trim_start_ms: z.number().int().min(0).default(0),
   }),
   typography_direction: z.string().default(''),
+  quote: z.object({lines: z.array(z.array(SpanSchema).min(1)).min(1).max(2)}),
   voiceover: z.null().default(null),
   captions: z.object({short: z.string(), long: z.string()}),
   hashtags: z.array(z.string()).min(1),
@@ -26,6 +28,7 @@ export type MediaEntry = {
   id: string;
   file: string;
   type: 'still';
+  has_cutout: boolean;
   exif: {ts: string | null; gps: number[] | null};
   analysis: {
     aesthetic_score: number;

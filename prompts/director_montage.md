@@ -7,9 +7,9 @@ the final EDL (edit decision list) JSON that the renderer executes verbatim.
 ## Closed vocabularies (use ONLY these values)
 
 - `motion.type`: `ken_burns | static | parallax`
-- `transition.type`: `cut | crossfade | whip_pan | flash_white | flash_black | zoom_punch | slide`
-- `effects`: `film_grain | vignette | chromatic_ab | vhs | bw`
-- `text.style`: `caption_lower | editorial_serif | kinetic_word | location_stamp | vhs_timestamp | none`
+- `transition.type`: `cut | cutout_pop` (other types render as cuts in this milestone)
+- `effects`: `quote_card` is the only effect that renders in this milestone
+- `text.style`: `caption_lower | kinetic_word | quote_duotone | none` (only these render)
 - `anchor`: `lower_third | center | upper_safe | corner_br`
 - `motion.easing`: `linear | easeInCubic | easeOutCubic | easeInOutCubic`
 
@@ -27,11 +27,26 @@ the final EDL (edit decision list) JSON that the renderer executes verbatim.
   `zoom` between 1.0 and 1.25, pan small (move `cx`/`cy` by at most 0.08
   between `from` and `to`), `easing` from the vocabulary above.
 - In this milestone the renderer only draws `caption_lower`, `kinetic_word`,
-  and `none` text styles — use only those. Text is sparse: at most 3 entries
-  carry a `text` block. `text.in_ms`/`out_ms` are RELATIVE to the entry's own
-  start and must fit inside the entry (`out_ms <= end_ms - start_ms`).
-- Transitions: use `{"type": "cut", "duration_ms": 0}` (other types render as
-  cuts in this milestone).
+  `quote_duotone`, and `none` text styles — use only those. Text is sparse: at
+  most 3 entries carry a `text` block (the quote entry counts as one).
+  `text.in_ms`/`out_ms` are RELATIVE to the entry's own start and must fit
+  inside the entry (`out_ms <= end_ms - start_ms`).
+- **The quote appears exactly once per reel.** The plan gives you
+  `quote.lines`. Pick ONE entry — the calmest / most fitting photo — and give
+  it a `text` block with `"style": "quote_duotone"`, `"anchor": "center"`.
+  Copy the plan's `quote.lines` into `text.spans` verbatim, flattened,
+  inserting a span `{"text": "\n"}` between line 1 and line 2 when there are
+  two lines. Set `content` to the plain-text join of all span texts (spaces
+  between words, a space where the newline span sits). If the photo set is
+  busy, instead put the quote on its own entry with
+  `"effects": ["quote_card"]` (the photo becomes a darkened backdrop). Give
+  the quote entry 2–4 beats of screen time and a text window covering most of
+  the entry (`in_ms` near 0, `out_ms` near the entry length).
+- **Cutout pops are signature moments.** Place 2–3
+  `"transition_out": {"type": "cutout_pop", "duration_ms": 400}` on cuts that
+  land at high points of the track's `energy_curve` — ONLY on entries whose
+  pool record has `"has_cutout": true`, and never on two consecutive entries.
+- All other transitions stay `{"type": "cut", "duration_ms": 0}`.
 - `audio` block: copy `track`, set `trim_start_ms` (0 unless the plan says
   otherwise), copy `beat_grid_ms` verbatim, `"mute_render": false`,
   `"voiceover": null`.

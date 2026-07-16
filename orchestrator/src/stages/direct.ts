@@ -69,7 +69,7 @@ const EDL_RESPONSE_SCHEMA = {
           transition_out: {
             type: 'OBJECT',
             properties: {
-              type: {type: 'STRING', enum: ['cut']},
+              type: {type: 'STRING', enum: ['cut', 'cutout_pop']},
               duration_ms: {type: 'INTEGER'},
             },
             required: ['type', 'duration_ms'],
@@ -80,12 +80,28 @@ const EDL_RESPONSE_SCHEMA = {
             nullable: true,
             properties: {
               content: {type: 'STRING'},
-              style: {type: 'STRING', enum: ['caption_lower', 'kinetic_word', 'none']},
+              style: {
+                type: 'STRING',
+                enum: ['caption_lower', 'kinetic_word', 'quote_duotone', 'none'],
+              },
               in_ms: {type: 'INTEGER'},
               out_ms: {type: 'INTEGER'},
               anchor: {
                 type: 'STRING',
                 enum: ['lower_third', 'center', 'upper_safe', 'corner_br'],
+              },
+              spans: {
+                type: 'ARRAY',
+                items: {
+                  type: 'OBJECT',
+                  properties: {
+                    text: {type: 'STRING'},
+                    bold: {type: 'BOOLEAN'},
+                    underline: {type: 'BOOLEAN'},
+                    tone: {type: 'STRING', enum: ['white', 'yellow']},
+                  },
+                  required: ['text'],
+                },
               },
             },
             required: ['content', 'style', 'in_ms', 'out_ms', 'anchor'],
@@ -103,6 +119,26 @@ export type DirectOptions = {
   mediaPool: MediaPool;
   track: TrackInfo;
 };
+
+/** The Director chooses WHERE the quote goes; the plan says WHAT it is.
+ * Live runs showed the model re-defaulting span tones, so copy the plan's
+ * spans onto the quote entry verbatim (a "\n" span separates the lines). */
+export function applyQuoteSpans(edl: Edl, quote: ProductionPlan['quote']): Edl {
+  const spans = quote.lines.flatMap((line, i) =>
+    i === 0
+      ? line
+      : [{text: '\n', bold: false, underline: false, tone: 'white' as const}, ...line],
+  );
+  const content = quote.lines
+    .map((line) => line.map((s) => s.text.trim()).join(' '))
+    .join(' ');
+  return {
+    ...edl,
+    timeline: edl.timeline.map((e) =>
+      e.text?.style === 'quote_duotone' ? {...e, text: {...e.text, content, spans}} : e,
+    ),
+  };
+}
 
 export async function runDirect(
   deps: PipelineDeps,
@@ -126,6 +162,7 @@ export async function runDirect(
   ];
 
   const assetIds = new Set([...opts.plan.selects, opts.track.id]);
+  const cutoutIds = new Set(opts.mediaPool.pool.filter((e) => e.has_cutout).map((e) => e.id));
   const usage: GeminiUsage = {inputTokens: 0, outputTokens: 0, thoughtsTokens: 0};
   let repairParts: {text: string}[] = [];
 
@@ -144,8 +181,10 @@ export async function runDirect(
     usage.outputTokens += res.usage.outputTokens;
     usage.thoughtsTokens += res.usage.thoughtsTokens;
 
-    const violations = checkInvariants(res.data, assetIds);
-    if (violations.length === 0) return {edl: res.data, usage};
+    const violations = checkInvariants(res.data, assetIds, cutoutIds);
+    if (violations.length === 0) {
+      return {edl: applyQuoteSpans(res.data, opts.plan.quote), usage};
+    }
     if (attempt === 1) {
       throw new PipelineError('direct', 'invariants', violations.join('\n'));
     }

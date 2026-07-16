@@ -37,6 +37,7 @@ export const MEDIA_POOL: MediaPool = {
     id,
     file: `${id}.jpg`,
     type: 'still',
+    has_cutout: id === 'img0' || id === 'img1',
     exif: {ts: null, gps: null},
     analysis: {
       aesthetic_score: 8,
@@ -62,6 +63,14 @@ export const PLAN: ProductionPlan = {
   hero_shots: [],
   audio: {track_id: 'songa', reason: '120 bpm, warm', trim_start_ms: 0},
   typography_direction: 'sparse lowercase',
+  quote: {
+    lines: [
+      [
+        {text: 'stay for the', bold: false, underline: false, tone: 'white' as const},
+        {text: 'light', bold: true, underline: false, tone: 'yellow' as const},
+      ],
+    ],
+  },
   voiceover: null,
   captions: {short: 'golden hour', long: 'A warm evening in four frames.'},
   hashtags: ['goldenhour'],

@@ -45,6 +45,28 @@ const PLAN_RESPONSE_SCHEMA = {
       required: ['track_id', 'reason'],
     },
     typography_direction: {type: 'STRING'},
+    quote: {
+      type: 'OBJECT',
+      properties: {
+        lines: {
+          type: 'ARRAY',
+          items: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                text: {type: 'STRING'},
+                bold: {type: 'BOOLEAN'},
+                underline: {type: 'BOOLEAN'},
+                tone: {type: 'STRING', enum: ['white', 'yellow']},
+              },
+              required: ['text'],
+            },
+          },
+        },
+      },
+      required: ['lines'],
+    },
     voiceover: {type: 'STRING', nullable: true},
     captions: {
       type: 'OBJECT',
@@ -53,8 +75,26 @@ const PLAN_RESPONSE_SCHEMA = {
     },
     hashtags: {type: 'ARRAY', items: {type: 'STRING'}},
   },
-  required: ['story', 'mode', 'duration_ms', 'selects', 'audio', 'captions', 'hashtags'],
+  required: ['story', 'mode', 'duration_ms', 'selects', 'audio', 'quote', 'captions', 'hashtags'],
 };
+
+/** The duotone contract wants exactly one yellow emotional center, but the
+ * model sometimes emits an all-white quote no matter what the prompt says.
+ * Rather than failing the reel over a color, promote the most emphasized
+ * span (last bold/underlined, else the last span) to yellow. */
+export function ensureYellow(quote: ProductionPlan['quote']): ProductionPlan['quote'] {
+  const spans = quote.lines.flat();
+  if (spans.some((s) => s.tone === 'yellow')) return quote;
+  const emphasized = spans.filter((s) => s.bold || s.underline);
+  const target = (emphasized.length > 0 ? emphasized : spans)[
+    (emphasized.length > 0 ? emphasized : spans).length - 1
+  ];
+  return {
+    lines: quote.lines.map((line) =>
+      line.map((s) => (s === target ? {...s, tone: 'yellow' as const} : s)),
+    ),
+  };
+}
 
 export type ProduceOptions = {
   mediaPool: MediaPool;
@@ -95,5 +135,5 @@ export async function runProduce(
     maxOutputTokens: 16384,
     repairNote: 'Return the production_plan JSON only, no prose.',
   });
-  return {plan: data, usage, repaired};
+  return {plan: {...data, quote: ensureYellow(data.quote)}, usage, repaired};
 }

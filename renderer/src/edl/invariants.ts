@@ -11,7 +11,11 @@ const nearBeat = (ms: number, grid: number[]): boolean =>
 // Hard invariants beyond Zod's reach (Tech Spec §6). Returns human-readable
 // violations — empty array means valid. Messages are fed back to the Director
 // repair loop verbatim, so keep them specific.
-export const checkInvariants = (edl: Edl, assetIds: Set<string>): string[] => {
+export const checkInvariants = (
+  edl: Edl,
+  assetIds: Set<string>,
+  cutoutIds?: Set<string>,
+): string[] => {
   const errors: string[] = [];
   const t = edl.timeline;
 
@@ -29,6 +33,11 @@ export const checkInvariants = (edl: Edl, assetIds: Set<string>): string[] => {
     }
     if (!assetIds.has(e.asset)) {
       errors.push(`entry ${i} references unknown asset "${e.asset}"`);
+    }
+    if (e.transition_out?.type === 'cutout_pop' && cutoutIds && !cutoutIds.has(e.asset)) {
+      errors.push(
+        `entry ${i} uses a cutout_pop transition but asset "${e.asset}" has no cutout — use a plain cut there`,
+      );
     }
     if (e.text) {
       const entryLen = e.end_ms - e.start_ms;

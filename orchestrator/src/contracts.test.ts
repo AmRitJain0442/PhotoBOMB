@@ -25,6 +25,35 @@ describe('ProductionPlanSchema', () => {
     expect(() => ProductionPlanSchema.parse(bad)).toThrow();
   });
 
+  it('rejects a plan without a quote', () => {
+    const {quote: _q, ...rest} = PLAN as Record<string, unknown>;
+    expect(() => ProductionPlanSchema.parse(rest)).toThrow();
+  });
+
+  it('rejects >2 quote lines, empty lines, and bad tones', () => {
+    const line = [{text: 'x'}];
+    expect(() =>
+      ProductionPlanSchema.parse({...PLAN, quote: {lines: [line, line, line]}}),
+    ).toThrow();
+    expect(() => ProductionPlanSchema.parse({...PLAN, quote: {lines: []}})).toThrow();
+    expect(() =>
+      ProductionPlanSchema.parse({...PLAN, quote: {lines: [[{text: 'x', tone: 'red'}]]}}),
+    ).toThrow();
+  });
+
+  it('defaults span emphasis fields', () => {
+    const parsed = ProductionPlanSchema.parse({
+      ...PLAN,
+      quote: {lines: [[{text: 'dusk'}, {text: 'glows', tone: 'yellow'}]]},
+    });
+    expect(parsed.quote.lines[0][0]).toEqual({
+      text: 'dusk',
+      bold: false,
+      underline: false,
+      tone: 'white',
+    });
+  });
+
   it('defaults rejects/hero_shots/trim_start_ms', () => {
     const {rejects, hero_shots, ...rest} = PLAN;
     const minimalAudio = {track_id: 'songa', reason: 'fits'};
