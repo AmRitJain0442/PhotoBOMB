@@ -166,6 +166,70 @@ body {
   font-size: 13px;
 }
 
+.brand-home {
+  all: unset;
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+}
+
+.brand-home:disabled {
+  cursor: default;
+}
+
+.brand-home:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 4px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 4px;
+  margin-left: 6px;
+}
+
+.nav-link {
+  border: none;
+  background: transparent;
+  color: var(--ink-dim);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 13.5px;
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.nav-link:hover:not(:disabled) {
+  color: var(--paper);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nav-link.active {
+  color: var(--paper);
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.nav-link:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.nav-link:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+.nav-status {
+  color: var(--amber);
+  font-size: 12.5px;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
 .screen-title {
   font-family: var(--font-display);
   font-weight: 600;
@@ -567,6 +631,135 @@ body {
   color: var(--ink-dim);
   text-align: center;
   padding: 18px 8px;
+  font-size: 14px;
+}
+
+/* ---- landing ---- */
+
+.landing-hero {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  flex-wrap: wrap;
+  padding: 44px 0 44px;
+}
+
+.landing-copy {
+  flex: 1.2;
+  min-width: 320px;
+}
+
+.landing-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(46px, 7vw, 78px);
+  line-height: 1.02;
+  margin: 0 0 20px;
+  text-shadow: 0 2px 40px rgba(0, 0, 0, 0.45);
+}
+
+.landing-accent {
+  color: var(--safelight);
+  text-shadow: 0 0 44px rgba(255, 91, 77, 0.45);
+}
+
+.landing-sub {
+  color: var(--ink-dim);
+  font-size: 17px;
+  max-width: 46ch;
+  margin: 0 0 28px;
+}
+
+.landing-cta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.landing-note {
+  color: var(--ink-dim);
+  font-size: 13px;
+}
+
+/* three prints on the hero — the top one is glass, so the light field and
+   the prints beneath refract through it */
+.print-fan {
+  flex: 1;
+  min-width: 300px;
+  height: 400px;
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.print {
+  position: absolute;
+  width: 212px;
+  aspect-ratio: 3 / 4;
+  border-radius: 18px;
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    0 26px 64px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.print-a {
+  background: linear-gradient(180deg, #f2a75e 0%, #d96a54 58%, #241722 100%);
+  transform: rotate(-10deg) translate(-72px, 10px);
+}
+
+.print-b {
+  background: linear-gradient(180deg, #e08a63 0%, #9c5476 62%, #1c1322 100%);
+  transform: rotate(7deg) translate(74px, -8px);
+}
+
+.print-c {
+  background: var(--glass-fill-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  transform: rotate(-2deg);
+  display: grid;
+  place-items: center;
+}
+
+.print-quote {
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1.3;
+  color: var(--paper);
+  text-align: center;
+  padding: 0 22px;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
+}
+
+.print-quote em {
+  font-style: normal;
+  font-weight: 700;
+  color: #ffd84d;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.step {
+  padding: 18px 20px;
+}
+
+.step-k {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--paper);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.step p {
+  margin: 0;
+  color: var(--ink-dim);
   font-size: 14px;
 }
 

@@ -5,13 +5,15 @@ import * as api from './api';
 import {ExportPanel} from './components/ExportPanel';
 import {CreateScreen} from './screens/CreateScreen';
 import {DevelopingScreen} from './screens/DevelopingScreen';
+import {LandingScreen} from './screens/LandingScreen';
 import {ReviewScreen} from './screens/ReviewScreen';
 
-export type Phase = 'create' | 'developing' | 'review';
+export type Phase = 'landing' | 'create' | 'developing' | 'review';
 
 export const App: React.FC = () => {
-  const [phase, setPhase] = useState<Phase>('create');
+  const [phase, setPhase] = useState<Phase>('landing');
   const [result, setResult] = useState<RunResultPayload | null>(null);
+  const developing = phase === 'developing';
 
   return (
     <div className="shell">
@@ -22,9 +24,34 @@ export const App: React.FC = () => {
         <div className="grain" />
       </div>
       <header className="brand">
-        <h1>Darkroom</h1>
-        <span className="tag">photos in, reel out</span>
+        <button
+          className="brand-home"
+          disabled={developing}
+          onClick={() => setPhase('landing')}
+          aria-label="Darkroom home"
+        >
+          <h1>Darkroom</h1>
+        </button>
+        <nav className="nav-links" aria-label="Screens">
+          <button
+            className={phase === 'create' ? 'nav-link active' : 'nav-link'}
+            disabled={developing}
+            onClick={() => setPhase('create')}
+          >
+            Create
+          </button>
+          <button
+            className={phase === 'review' ? 'nav-link active' : 'nav-link'}
+            disabled={developing || !result}
+            title={result ? undefined : 'Your reel will appear here once it develops'}
+            onClick={() => setPhase('review')}
+          >
+            Your reel
+          </button>
+        </nav>
+        {developing && <span className="nav-status">developing…</span>}
       </header>
+      {phase === 'landing' && <LandingScreen onStart={() => setPhase('create')} />}
       {phase === 'create' && <CreateScreen onStarted={() => setPhase('developing')} />}
       {phase === 'developing' && (
         <DevelopingScreen
