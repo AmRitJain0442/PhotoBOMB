@@ -582,6 +582,43 @@ body {
   white-space: nowrap;
 }
 
+/* ---- the look: style picker + enhance switch ---- */
+
+.seg {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-edge);
+  background: rgba(255, 255, 255, 0.045);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.switch-row input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--safelight);
+  cursor: pointer;
+}
+
+.switch-row.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.switch-row .feel {
+  color: var(--ink-dim);
+  font-size: 13px;
+}
+
 /* ---- phone preview frame ---- */
 
 .phone-frame {

@@ -15,6 +15,8 @@ export type Track = {
   feel: string;
 };
 
+export type ReelStyle = 'classic' | 'live' | 'film';
+
 export type Plan = {
   story: {read: string; type: string; arc_possible: boolean};
   mode: 'montage';
@@ -33,7 +35,12 @@ export type PipelineStatus = {
   code: string | null;
 };
 
-export type RunResultPayload = {runId: string; edl: Edl; plan: Plan};
+export type RunResultPayload = {
+  runId: string;
+  edl: Edl;
+  plan: Plan;
+  assetPaths?: Record<string, string>;
+};
 
 export type RenderStatus = {
   state: 'idle' | 'running' | 'done' | 'failed';
@@ -99,8 +106,18 @@ export const uploadTrack = (file: File): Promise<Track> => {
 
 export const runPipeline = (
   track: 'auto' | string,
-  avoid?: {track_id?: string; summary?: string},
-): Promise<{runId: string}> => postJson('/api/pipeline/run', {track, avoid});
+  opts?: {
+    avoid?: {track_id?: string; summary?: string};
+    style?: ReelStyle;
+    enhance?: boolean;
+  },
+): Promise<{runId: string}> =>
+  postJson('/api/pipeline/run', {
+    track,
+    avoid: opts?.avoid,
+    style: opts?.style ?? 'classic',
+    enhance: opts?.enhance ?? false,
+  });
 
 export const revisePipeline = (
   runId: string,

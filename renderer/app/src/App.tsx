@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 
-import type {RunResultPayload} from './api';
+import type {ReelStyle, RunResultPayload} from './api';
 import * as api from './api';
 import {ExportPanel} from './components/ExportPanel';
 import {CreateScreen} from './screens/CreateScreen';
@@ -13,6 +13,10 @@ export type Phase = 'landing' | 'create' | 'developing' | 'review';
 export const App: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('landing');
   const [result, setResult] = useState<RunResultPayload | null>(null);
+  const [look, setLook] = useState<{style: ReelStyle; enhance: boolean}>({
+    style: 'classic',
+    enhance: false,
+  });
   const developing = phase === 'developing';
 
   return (
@@ -52,7 +56,14 @@ export const App: React.FC = () => {
         {developing && <span className="nav-status">developing…</span>}
       </header>
       {phase === 'landing' && <LandingScreen onStart={() => setPhase('create')} />}
-      {phase === 'create' && <CreateScreen onStarted={() => setPhase('developing')} />}
+      {phase === 'create' && (
+        <CreateScreen
+          onStarted={(chosen) => {
+            setLook(chosen);
+            setPhase('developing');
+          }}
+        />
+      )}
       {phase === 'developing' && (
         <DevelopingScreen
           onDone={(r) => {
@@ -69,8 +80,12 @@ export const App: React.FC = () => {
           onAnotherTake={async () => {
             try {
               await api.runPipeline('auto', {
-                track_id: result.plan.audio.track_id,
-                summary: result.plan.story.read,
+                avoid: {
+                  track_id: result.plan.audio.track_id,
+                  summary: result.plan.story.read,
+                },
+                style: look.style,
+                enhance: look.enhance,
               });
               setPhase('developing');
             } catch {

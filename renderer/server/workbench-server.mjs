@@ -76,8 +76,14 @@ export function createApp({pipelineImpl, ingestImpl, checkCredentials, roots}) {
       return res.status(404).end();
     }
     unlinkSync(p);
-    const cutout = join(assetsDir, 'cutouts', `${f.replace(/\.[^.]+$/, '')}.png`);
-    if (existsSync(cutout)) unlinkSync(cutout);
+    const id = f.replace(/\.[^.]+$/, '');
+    for (const derived of [
+      join(assetsDir, 'cutouts', `${id}.png`),
+      join(assetsDir, 'enhanced', `${id}.jpg`),
+      join(assetsDir, 'clips', `${id}.mp4`),
+    ]) {
+      if (existsSync(derived)) unlinkSync(derived);
+    }
     res.status(204).end();
   });
 
@@ -162,9 +168,11 @@ export function createApp({pipelineImpl, ingestImpl, checkCredentials, roots}) {
     if (!cred.ok) {
       return res.status(422).json({error: 'setup', message: cred.message});
     }
-    const {track = 'auto', avoid} = req.body ?? {};
+    const {track = 'auto', avoid, style = 'classic', enhance = false} = req.body ?? {};
     const runId = newRunId();
-    startJob(runId, (onProgress) => pipelineImpl.run({track, avoid, runId}, onProgress));
+    startJob(runId, (onProgress) =>
+      pipelineImpl.run({track, avoid, style, enhance, runId}, onProgress),
+    );
     res.status(202).json({runId});
   });
 
@@ -325,8 +333,8 @@ if (isMain) {
   const app = createApp({
     roots: {rendererRoot, repoRoot},
     pipelineImpl: {
-      run: ({track, avoid, runId}, onProgress) =>
-        runPipeline({photosDir, track, avoid, runId, deps}, onProgress),
+      run: ({track, avoid, style, enhance, runId}, onProgress) =>
+        runPipeline({photosDir, track, avoid, style, enhance, runId, deps}, onProgress),
       revise: ({runId, pin, removeAsset, asRunId}, onProgress) =>
         revisePipeline({runId, pin, removeAsset, asRunId, deps}, onProgress),
     },

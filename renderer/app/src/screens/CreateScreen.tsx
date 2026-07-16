@@ -1,18 +1,26 @@
 import React, {useCallback, useEffect, useState} from 'react';
 
 import * as api from '../api';
-import type {Asset, Track} from '../api';
+import type {Asset, ReelStyle, Track} from '../api';
 import {MusicPicker} from '../components/MusicPicker';
 import {PhotoGrid, isPhoto} from '../components/PhotoGrid';
 import {canCreate} from '../lib/gating';
 
+const STYLES: Array<{value: ReelStyle; label: string; sub: string}> = [
+  {value: 'classic', label: 'Classic montage', sub: 'your photos, cut to the beat'},
+  {value: 'live', label: 'Live moments', sub: 'a photo or two comes alive'},
+  {value: 'film', label: 'AI film', sub: 'one continuous video — uses more magic'},
+];
+
 export const CreateScreen: React.FC<{
-  onStarted: () => void;
+  onStarted: (look: {style: ReelStyle; enhance: boolean}) => void;
   avoid?: {track_id?: string; summary?: string};
 }> = ({onStarted, avoid}) => {
   const [photos, setPhotos] = useState<Asset[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [choice, setChoice] = useState<'auto' | string>('auto');
+  const [style, setStyle] = useState<ReelStyle>('classic');
+  const [enhance, setEnhance] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [songBusy, setSongBusy] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -72,8 +80,8 @@ export const CreateScreen: React.FC<{
     setStarting(true);
     setNote(null);
     try {
-      await api.runPipeline(choice, avoid);
-      onStarted();
+      await api.runPipeline(choice, {avoid, style, enhance});
+      onStarted({style, enhance});
     } catch (e) {
       setNote(
         e instanceof api.ApiError && e.body.message
@@ -100,6 +108,36 @@ export const CreateScreen: React.FC<{
             uploading={songBusy}
             onUpload={handleSong}
           />
+          <div className="card">
+            <h2>The look</h2>
+            <div className="stack">
+              <div className="seg" role="radiogroup" aria-label="Style">
+                {STYLES.map((s) => (
+                  <button
+                    key={s.value}
+                    role="radio"
+                    aria-checked={style === s.value}
+                    className={style === s.value ? 'music-card selected' : 'music-card'}
+                    onClick={() => setStyle(s.value)}
+                  >
+                    <span>{s.label}</span>
+                    <span className="feel">{s.sub}</span>
+                  </button>
+                ))}
+              </div>
+              <label className={style === 'film' ? 'switch-row disabled' : 'switch-row'}>
+                <input
+                  type="checkbox"
+                  checked={enhance && style !== 'film'}
+                  disabled={style === 'film'}
+                  onChange={(e) => setEnhance(e.target.checked)}
+                />
+                <span>
+                  Enhance photos <span className="feel">warm cinematic grade</span>
+                </span>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
       <div className="dock">

@@ -29,6 +29,11 @@ export const ReviewScreen: React.FC<{
 
   useEffect(() => {
     api.listTracks().then(setTracks).catch(() => undefined);
+    if (result.assetPaths && Object.keys(result.assetPaths).length > 0) {
+      setAssets(result.assetPaths);
+      return;
+    }
+    // older runs served from disk carry no asset map — rebuild from the library
     api
       .listAssets()
       .then((list) => {
@@ -37,7 +42,7 @@ export const ReviewScreen: React.FC<{
         setAssets(map);
       })
       .catch(() => undefined);
-  }, []);
+  }, [result.assetPaths]);
 
   const revise = async (patch: {pin?: string; removeAsset?: string}, label: string) => {
     setRevising(label);
@@ -71,10 +76,12 @@ export const ReviewScreen: React.FC<{
 
   const currentTrackId = result.plan.audio.track_id;
   const memoAssets = useMemo(() => assets, [assets]);
+  // films carry their own sound and can only be re-taken, not tweaked
+  const filmMode = result.edl.mode === 'narrative';
 
   return (
     <div>
-      <h2 className="screen-title">Your reel</h2>
+      <h2 className="screen-title">{filmMode ? 'Your film' : 'Your reel'}</h2>
       <p className="screen-sub">{result.plan.story.read}</p>
       <div className="row">
         <div className="col" style={{flex: '0 0 auto', minWidth: 330}}>
@@ -95,16 +102,18 @@ export const ReviewScreen: React.FC<{
               </button>
             </div>
           </div>
-          <TweaksPanel
-            edl={edl}
-            tracks={tracks}
-            currentTrackId={currentTrackId}
-            assets={memoAssets}
-            busy={revising !== null}
-            onSetText={(i, content) => setEdl((cur) => setText(cur, i, content))}
-            onPinTrack={(id) => revise({pin: id}, 'Re-cutting to the new song…')}
-            onRemovePhoto={(id) => revise({removeAsset: id}, 'Re-cutting without that photo…')}
-          />
+          {!filmMode && (
+            <TweaksPanel
+              edl={edl}
+              tracks={tracks}
+              currentTrackId={currentTrackId}
+              assets={memoAssets}
+              busy={revising !== null}
+              onSetText={(i, content) => setEdl((cur) => setText(cur, i, content))}
+              onPinTrack={(id) => revise({pin: id}, 'Re-cutting to the new song…')}
+              onRemovePhoto={(id) => revise({removeAsset: id}, 'Re-cutting without that photo…')}
+            />
+          )}
           {exportSlot?.(edl, memoAssets)}
         </div>
       </div>

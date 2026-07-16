@@ -125,6 +125,41 @@ describe('pipeline endpoints', () => {
     gate.resolve();
   });
 
+  it('forwards style and enhance to the pipeline', async () => {
+    let seen;
+    await boot({
+      pipelineImpl: {
+        run: async (opts) => {
+          seen = opts;
+          return fakeResult(opts.runId);
+        },
+        revise: async () => fakeResult('px'),
+      },
+    });
+    const r = await post('/api/pipeline/run', {track: 'auto', style: 'film', enhance: true});
+    expect(r.status).toBe(202);
+    await new Promise((res) => setTimeout(res, 30));
+    expect(seen.style).toBe('film');
+    expect(seen.enhance).toBe(true);
+  });
+
+  it('defaults style/enhance for old clients', async () => {
+    let seen;
+    await boot({
+      pipelineImpl: {
+        run: async (opts) => {
+          seen = opts;
+          return fakeResult(opts.runId);
+        },
+        revise: async () => fakeResult('px'),
+      },
+    });
+    await post('/api/pipeline/run', {track: 'auto'});
+    await new Promise((res) => setTimeout(res, 30));
+    expect(seen.style).toBe('classic');
+    expect(seen.enhance).toBe(false);
+  });
+
   it('revise -> 202', async () => {
     await boot();
     const r = await post('/api/pipeline/revise', {runId: 'p1', pin: 'songb'});
@@ -190,15 +225,23 @@ describe('asset deletion', () => {
     expect(list.find((a) => a.file === 'pic.jpg')).toBeUndefined();
   });
 
-  it('deletes the photo cutout alongside the photo', async () => {
+  it('deletes the photo cutout, enhanced grade, and clip alongside the photo', async () => {
     await boot();
     const assets = path.join(rendererRoot, 'public', 'assets');
     await writeFile(path.join(assets, 'pic.jpg'), 'x');
-    await mkdir(path.join(assets, 'cutouts'), {recursive: true});
-    await writeFile(path.join(assets, 'cutouts', 'pic.png'), 'cutout');
+    for (const [dir, file] of [
+      ['cutouts', 'pic.png'],
+      ['enhanced', 'pic.jpg'],
+      ['clips', 'pic.mp4'],
+    ]) {
+      await mkdir(path.join(assets, dir), {recursive: true});
+      await writeFile(path.join(assets, dir, file), 'derived');
+    }
     const r = await fetch(base + '/api/assets/pic.jpg', {method: 'DELETE'});
     expect(r.status).toBe(204);
     await expect(readFile(path.join(assets, 'cutouts', 'pic.png'))).rejects.toThrow();
+    await expect(readFile(path.join(assets, 'enhanced', 'pic.jpg'))).rejects.toThrow();
+    await expect(readFile(path.join(assets, 'clips', 'pic.mp4'))).rejects.toThrow();
   });
 });
 
