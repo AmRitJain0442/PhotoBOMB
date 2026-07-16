@@ -20,6 +20,27 @@ afterEach(async () => {
   await rm(root, {recursive: true, force: true});
 });
 
+describe('style context', () => {
+  const run = async (style: 'classic' | 'live' | 'film') => {
+    const {transport, calls} = makeTransport([JSON.stringify(PLAN)]);
+    const deps = makeDeps(root, transport);
+    await runProduce(deps, {mediaPool: MEDIA_POOL, tracks: TRACKS, pinned: null, style});
+    return calls[0].parts.map((p) => p.text).join('\n');
+  };
+
+  it('tells the Producer the style and the live hero rule', async () => {
+    const text = await run('live');
+    expect(text).toContain('style: live');
+    expect(text).toMatch(/hero_shots/);
+    expect(text).toMatch(/motion_prompt/i);
+  });
+
+  it('classic forbids heroes; film demands a film_prompt', async () => {
+    expect(await run('classic')).toMatch(/hero_shots MUST be \[\]/);
+    expect(await run('film')).toMatch(/film_prompt/);
+  });
+});
+
 describe('ensureYellow', () => {
   const span = (text: string, extra: Partial<{bold: boolean; underline: boolean; tone: 'white' | 'yellow'}> = {}) => ({
     text,

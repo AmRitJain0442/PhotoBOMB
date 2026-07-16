@@ -5,6 +5,7 @@ import {
   ProductionPlanSchema,
   type MediaPool,
   type ProductionPlan,
+  type ReelStyle,
   type TrackInfo,
 } from '../contracts.js';
 import {MODELS, generateJson, type GeminiUsage} from '../gemini.js';
@@ -34,7 +35,15 @@ const PLAN_RESPONSE_SCHEMA = {
         required: ['id', 'reason'],
       },
     },
-    hero_shots: {type: 'ARRAY', items: {type: 'STRING'}},
+    hero_shots: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {id: {type: 'STRING'}, motion_prompt: {type: 'STRING'}},
+        required: ['id', 'motion_prompt'],
+      },
+    },
+    film_prompt: {type: 'STRING'},
     audio: {
       type: 'OBJECT',
       properties: {
@@ -96,10 +105,24 @@ export function ensureYellow(quote: ProductionPlan['quote']): ProductionPlan['qu
   };
 }
 
+// What each reel style demands of the plan — appended to the prompt context.
+const STYLE_RULES: Record<ReelStyle, string> = {
+  classic: 'hero_shots MUST be [] and film_prompt MUST be omitted.',
+  live:
+    'Pick 1-2 hero_shots: the photos that most deserve motion. Each motion_prompt is one ' +
+    'grounded sentence describing subtle, realistic motion for THAT photo (camera drift, ' +
+    'subject movement, atmosphere). film_prompt MUST be omitted.',
+  film:
+    'hero_shots MUST be []. Write film_prompt: a 3-5 sentence brief for a single continuous ' +
+    '10-12 second vertical film made from these photos — subjects, arc, mood, pacing. ' +
+    'Ground it ONLY in what the photos show.',
+};
+
 export type ProduceOptions = {
   mediaPool: MediaPool;
   tracks: TrackInfo[];
   pinned: TrackInfo | null;
+  style?: ReelStyle;
   avoid?: {track_id?: string; summary?: string};
 };
 
@@ -109,7 +132,9 @@ export async function runProduce(
 ): Promise<{plan: ProductionPlan; usage: GeminiUsage; repaired: boolean}> {
   const system = await readFile(promptPath(deps.repoRoot, 'producer.md'), 'utf8');
 
+  const style = opts.style ?? 'classic';
   const parts = [
+    {text: `style: ${style}\n${STYLE_RULES[style]}`},
     {text: `media_pool:\n${JSON.stringify(opts.mediaPool)}`},
     opts.pinned
       ? {text: `Pinned track — you MUST use this one:\n${JSON.stringify(opts.pinned)}`}

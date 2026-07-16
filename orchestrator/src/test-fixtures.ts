@@ -76,6 +76,14 @@ export const PLAN: ProductionPlan = {
   hashtags: ['goldenhour'],
 };
 
+export const LIVE_PLAN: ProductionPlan = {
+  ...PLAN,
+  hero_shots: [
+    {id: 'img0', motion_prompt: 'the balloon drifts gently upward'},
+    {id: 'img2', motion_prompt: 'city lights flicker on at dusk'},
+  ],
+};
+
 export const goodEdl = (track = 'assets/audio/songa.wav') => ({
   mode: 'montage',
   aspect: '9:16',

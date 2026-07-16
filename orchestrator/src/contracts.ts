@@ -4,13 +4,21 @@ import {z} from 'zod';
 import {SpanSchema} from '../../renderer/src/edl/schema.js';
 import type {GeminiUsage} from './gemini.js';
 
+export type ReelStyle = 'classic' | 'live' | 'film';
+
+export const HeroShotSchema = z.object({
+  id: z.string(),
+  motion_prompt: z.string().min(1),
+});
+
 export const ProductionPlanSchema = z.object({
   story: z.object({read: z.string(), type: z.string(), arc_possible: z.boolean()}),
   mode: z.literal('montage'),
   duration_ms: z.number().int().positive(),
   selects: z.array(z.string()).min(3),
   rejects: z.array(z.object({id: z.string(), reason: z.string()})).default([]),
-  hero_shots: z.array(z.unknown()).max(0).default([]),
+  hero_shots: z.array(HeroShotSchema).max(2).default([]),
+  film_prompt: z.string().optional(),
   audio: z.object({
     track_id: z.string(),
     reason: z.string(),
