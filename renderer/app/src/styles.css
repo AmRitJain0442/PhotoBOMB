@@ -1,22 +1,36 @@
-/* Darkroom design tokens — consumer-warm darkroom (spec rev 3, plan Task 8).
-   The signature moment is the Developing screen's safelight glow. */
+/* Darkroom design tokens — liquid glass over a living light field.
+   The signature is the safelight drifting THROUGH the glass: three blurred
+   light sources (safelight coral, enlarger amber, dusk violet) move slowly
+   behind every panel, and the panels are real backdrop-filter glass. */
 
 :root {
-  --room: #181114; /* warm black — the room */
-  --tray: #221a1e; /* raised surfaces */
-  --tray-edge: #352a2f;
-  --paper: #f5efe6; /* print paper — light cards */
-  --ink-on-dark: #f0e9df;
-  --ink-dim: #b7a9a0;
-  --ink-on-paper: #2a2125;
-  --safelight: #ff5b4d; /* primary action + brand */
+  --room-deep: #100b12; /* the dark floor of the room */
+  --paper: #f5efe6; /* print paper — primary text */
+  --ink-dim: rgba(240, 233, 223, 0.6);
+  --safelight: #ff5b4d; /* primary action + brand light */
   --safelight-deep: #e04537;
-  --amber: #e8b04b; /* progress */
+  --amber: #e8b04b; /* enlarger lamp + focus ring */
+  --dusk: #8b5fd6; /* golden-hour violet */
   --print-green: #8fc98a; /* success */
-  --radius-card: 14px;
+
+  /* glass material */
+  --glass-fill: linear-gradient(165deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  --glass-fill-strong: linear-gradient(165deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+  --glass-edge: rgba(255, 255, 255, 0.16);
+  --glass-highlight: rgba(255, 255, 255, 0.28);
+  --glass-blur: blur(22px) saturate(160%);
+  --glass-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+
+  --radius-card: 22px;
   --radius-pill: 999px;
   --font-display: 'Fraunces', Georgia, serif;
   --font-ui: 'Public Sans', system-ui, sans-serif;
+
+  /* legacy aliases (older inline styles) */
+  --room: #100b12;
+  --tray: rgba(255, 255, 255, 0.07);
+  --tray-edge: rgba(255, 255, 255, 0.16);
+  --ink-on-dark: #f5efe6;
 }
 
 * {
@@ -31,36 +45,116 @@ body,
 }
 
 body {
-  background: var(--room);
-  color: var(--ink-on-dark);
+  background: var(--room-deep);
+  color: var(--paper);
   font-family: var(--font-ui);
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
-/* ---- shell ---- */
+/* ---- the light field: what the glass refracts ---- */
+
+.lightfield {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: radial-gradient(130% 110% at 50% -10%, #1d1220 0%, #140d17 52%, #0c080e 100%);
+}
+
+.blob {
+  position: absolute;
+  width: 58vmax;
+  height: 58vmax;
+  border-radius: 50%;
+  filter: blur(72px);
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+
+.blob-safelight {
+  background: radial-gradient(circle at 40% 40%, rgba(255, 91, 77, 0.55), transparent 62%);
+  top: -18%;
+  left: -14%;
+  animation: drift-a 34s ease-in-out infinite alternate;
+}
+
+.blob-amber {
+  background: radial-gradient(circle at 55% 45%, rgba(232, 176, 75, 0.4), transparent 60%);
+  bottom: -24%;
+  right: -12%;
+  animation: drift-b 42s ease-in-out infinite alternate;
+}
+
+.blob-dusk {
+  background: radial-gradient(circle at 50% 50%, rgba(139, 95, 214, 0.42), transparent 60%);
+  top: 28%;
+  right: 22%;
+  width: 44vmax;
+  height: 44vmax;
+  animation: drift-c 38s ease-in-out infinite alternate;
+}
+
+@keyframes drift-a {
+  to {
+    transform: translate(16vw, 14vh) scale(1.18);
+  }
+}
+
+@keyframes drift-b {
+  to {
+    transform: translate(-14vw, -10vh) scale(1.12);
+  }
+}
+
+@keyframes drift-c {
+  to {
+    transform: translate(-18vw, 10vh) scale(0.92);
+  }
+}
+
+.grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---- shell + docks ---- */
 
 .shell {
   max-width: 1080px;
   margin: 0 auto;
-  padding: 28px 24px 64px;
+  padding: 20px 24px 150px;
 }
 
 .brand {
-  display: flex;
+  position: sticky;
+  top: 16px;
+  z-index: 20;
+  display: inline-flex;
   align-items: baseline;
   gap: 10px;
-  margin-bottom: 28px;
+  padding: 10px 20px;
+  margin-bottom: 30px;
+  border-radius: var(--radius-pill);
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 var(--glass-highlight);
 }
 
 .brand h1 {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 26px;
+  font-size: 22px;
   letter-spacing: 0.01em;
   margin: 0;
-  color: var(--ink-on-dark);
+  color: var(--paper);
 }
 
 .brand h1::first-letter {
@@ -75,8 +169,9 @@ body {
 .screen-title {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 34px;
+  font-size: 36px;
   margin: 0 0 6px;
+  text-shadow: 0 2px 30px rgba(0, 0, 0, 0.4);
 }
 
 .screen-sub {
@@ -84,13 +179,49 @@ body {
   margin: 0 0 28px;
 }
 
+/* floating action dock */
+
+.dock {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 12px 10px 22px;
+  max-width: min(760px, calc(100vw - 24px));
+  border-radius: var(--radius-pill);
+  background: var(--glass-fill-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+.dock .hint,
+.dock .error-note {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ---- cards & panels ---- */
 
 .card {
-  background: var(--tray);
-  border: 1px solid var(--tray-edge);
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-edge);
   border-radius: var(--radius-card);
-  padding: 20px;
+  padding: 22px;
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .card h2 {
@@ -111,6 +242,7 @@ body {
   cursor: pointer;
   border: 1px solid transparent;
   transition:
+    box-shadow 0.2s ease,
     background 0.15s ease,
     transform 0.1s ease,
     opacity 0.15s ease;
@@ -121,27 +253,38 @@ body {
 }
 
 .btn-primary {
-  background: var(--safelight);
+  background: linear-gradient(165deg, rgba(255, 104, 90, 0.95), rgba(224, 69, 55, 0.8));
   color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 10px 32px rgba(255, 91, 77, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .btn-primary:hover {
-  background: var(--safelight-deep);
+  box-shadow:
+    0 14px 40px rgba(255, 91, 77, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 .btn-primary:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .btn-secondary {
-  background: transparent;
-  color: var(--ink-on-dark);
-  border-color: var(--tray-edge);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--paper);
+  border-color: var(--glass-edge);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .btn-secondary:hover {
-  border-color: var(--ink-dim);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .btn:focus-visible {
@@ -164,6 +307,24 @@ body {
   font-size: 14px;
 }
 
+/* ---- text inputs (tweaks) ---- */
+
+.text-input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-edge);
+  border-radius: 12px;
+  color: var(--paper);
+  padding: 10px 12px;
+  font: inherit;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.text-input:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 1px;
+}
+
 /* ---- developing screen signature: the safelight glow ---- */
 
 .develop-room {
@@ -178,11 +339,11 @@ body {
 
 .safelight-glow {
   position: absolute;
-  width: 480px;
-  height: 480px;
+  width: 520px;
+  height: 520px;
   max-width: 90vw;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 91, 77, 0.22) 0%, rgba(255, 91, 77, 0) 65%);
+  background: radial-gradient(circle, rgba(255, 91, 77, 0.26) 0%, rgba(255, 91, 77, 0) 65%);
   animation: safelight-pulse 3.2s ease-in-out infinite;
   pointer-events: none;
 }
@@ -200,14 +361,28 @@ body {
 }
 
 .develop-reel {
-  width: 64px;
-  height: 64px;
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
-  border: 3px solid var(--tray-edge);
-  border-top-color: var(--safelight);
-  animation: reel-spin 1.6s linear infinite;
   position: relative;
   z-index: 1;
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 var(--glass-highlight);
+}
+
+.develop-reel::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.12);
+  border-top-color: var(--safelight);
+  animation: reel-spin 1.6s linear infinite;
 }
 
 @keyframes reel-spin {
@@ -219,26 +394,13 @@ body {
 .develop-line {
   font-family: var(--font-display);
   font-size: 24px;
-  color: var(--ink-on-dark);
+  color: var(--paper);
   position: relative;
   z-index: 1;
   transition: opacity 0.4s ease;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .safelight-glow {
-    animation: none;
-    opacity: 0.8;
-  }
-  .develop-reel {
-    animation: none;
-  }
-  .develop-line {
-    transition: none;
-  }
-}
-
-/* ---- photo grid / music cards (Tasks 9+) ---- */
+/* ---- photo grid / music cards ---- */
 
 .photo-grid {
   display: grid;
@@ -249,10 +411,11 @@ body {
 .photo-cell {
   position: relative;
   aspect-ratio: 3 / 4;
-  border-radius: 10px;
+  border-radius: 14px;
   overflow: hidden;
-  background: var(--room);
-  border: 1px solid var(--tray-edge);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-edge);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
 }
 
 .photo-cell img {
@@ -266,12 +429,14 @@ body {
   position: absolute;
   top: 6px;
   right: 6px;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  border: none;
-  background: rgba(24, 17, 20, 0.75);
-  color: var(--ink-on-dark);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(16, 11, 18, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--paper);
   cursor: pointer;
   font-size: 13px;
   line-height: 1;
@@ -279,22 +444,27 @@ body {
 
 .photo-cell .remove:hover {
   background: var(--safelight);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .dropzone {
-  border: 1.5px dashed var(--tray-edge);
-  border-radius: var(--radius-card);
+  border: 1.5px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 16px;
   padding: 26px;
   text-align: center;
   color: var(--ink-dim);
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  background: rgba(255, 255, 255, 0.03);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .dropzone.active,
 .dropzone:hover {
   border-color: var(--safelight);
-  color: var(--ink-on-dark);
+  background: rgba(255, 91, 77, 0.07);
+  color: var(--paper);
 }
 
 .music-cards {
@@ -308,20 +478,32 @@ body {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--tray-edge);
-  background: var(--room);
+  border-radius: 14px;
+  border: 1px solid var(--glass-edge);
+  background: rgba(255, 255, 255, 0.045);
   cursor: pointer;
-  color: var(--ink-on-dark);
+  color: var(--paper);
   text-align: left;
   font-family: var(--font-ui);
   font-size: 14px;
   width: 100%;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.music-card:hover {
+  background: rgba(255, 255, 255, 0.09);
 }
 
 .music-card.selected {
-  border-color: var(--safelight);
-  box-shadow: 0 0 0 1px var(--safelight);
+  border-color: rgba(255, 91, 77, 0.65);
+  background: linear-gradient(165deg, rgba(255, 91, 77, 0.2), rgba(255, 91, 77, 0.08));
+  box-shadow:
+    0 0 0 1px rgba(255, 91, 77, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .music-card .feel {
@@ -334,6 +516,22 @@ body {
   color: var(--ink-dim);
   font-size: 12px;
   white-space: nowrap;
+}
+
+/* ---- phone preview frame ---- */
+
+.phone-frame {
+  background: var(--glass-fill-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-edge);
+  border-radius: 32px;
+  padding: 12px;
+  width: fit-content;
+  box-shadow:
+    0 28px 70px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 var(--glass-highlight);
+  transition: opacity 0.2s ease;
 }
 
 /* ---- layout helpers ---- */
@@ -370,4 +568,32 @@ body {
   text-align: center;
   padding: 18px 8px;
   font-size: 14px;
+}
+
+/* ---- motion & small screens ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  .blob {
+    animation: none;
+  }
+  .safelight-glow {
+    animation: none;
+    opacity: 0.8;
+  }
+  .develop-reel::after {
+    animation: none;
+  }
+  .develop-line {
+    transition: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .dock {
+    padding: 8px 10px 8px 16px;
+    gap: 10px;
+  }
+  .screen-title {
+    font-size: 30px;
+  }
 }

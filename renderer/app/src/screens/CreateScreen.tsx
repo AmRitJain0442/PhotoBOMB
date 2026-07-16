@@ -100,18 +100,15 @@ export const CreateScreen: React.FC<{
             uploading={songBusy}
             onUpload={handleSong}
           />
-          <div className="stack">
-            <button
-              className="btn btn-primary"
-              disabled={!gate.ok || starting}
-              onClick={start}
-            >
-              {starting ? 'Getting started…' : 'Make my reel'}
-            </button>
-            {!gate.ok && <span className="hint">{gate.hint}</span>}
-            {note && <span className="error-note">{note}</span>}
-          </div>
         </div>
+      </div>
+      <div className="dock">
+        {!gate.ok && <span className="hint">{gate.hint}</span>}
+        {note && <span className="error-note">{note}</span>}
+        {gate.ok && !note && <span className="hint" style={{color: 'var(--ink-dim)'}}>Ready when you are.</span>}
+        <button className="btn btn-primary" disabled={!gate.ok || starting} onClick={start}>
+          {starting ? 'Getting started…' : 'Make my reel'}
+        </button>
       </div>
     </div>
   );

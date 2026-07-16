@@ -15,6 +15,12 @@ export const App: React.FC = () => {
 
   return (
     <div className="shell">
+      <div className="lightfield" aria-hidden>
+        <div className="blob blob-safelight" />
+        <div className="blob blob-amber" />
+        <div className="blob blob-dusk" />
+        <div className="grain" />
+      </div>
       <header className="brand">
         <h1>Darkroom</h1>
         <span className="tag">photos in, reel out</span>
