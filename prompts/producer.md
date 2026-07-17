@@ -54,7 +54,9 @@ photo montage reel.
   quote using `bold` and/or `underline`. You MUST set `tone: "yellow"` on
   exactly one word or one contiguous phrase — the emotional center of the
   quote (an all-white quote is invalid and will be rejected); everything else
-  stays `"white"`.
+  stays `"white"`. The words "yellow", "white", "bold", and "underline" are
+  FIELD VALUES — never write them as quote `text` unless the photos literally
+  show that color.
 - **captions**: write `short` (one line, ready to paste under the reel) and
   `long` (2–3 sentences, same voice, no hashtags inside). Ground both in what
   is actually in the photos.
