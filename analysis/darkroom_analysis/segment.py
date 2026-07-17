@@ -15,7 +15,15 @@ import re
 import numpy as np
 from PIL import Image, ImageFilter
 
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-2.5-flash"  # Gemini 3 dropped segmentation — this stays 2.5
+PROJECT = "project-a2dcdad0-5d65-4d61-846"
+
+
+def make_client():
+    """Segmentation-specific client: 2.5-flash only exists at us-central1."""
+    from google import genai
+
+    return genai.Client(vertexai=True, project=PROJECT, location="us-central1")
 MIN_AREA_FRAC = 0.03
 MAX_AREA_FRAC = 0.90
 MASK_THRESHOLD = 127

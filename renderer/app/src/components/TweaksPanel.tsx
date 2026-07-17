@@ -28,19 +28,12 @@ export const TweaksPanel: React.FC<{
             {texts.map((t) => (
               <input
                 key={`${t.entryIndex}-${t.content}`}
+                className="text-input"
                 defaultValue={t.content}
                 aria-label="Text on screen"
                 disabled={busy}
                 onBlur={(e) => {
                   if (e.target.value !== t.content) onSetText(t.entryIndex, e.target.value);
-                }}
-                style={{
-                  background: 'var(--room)',
-                  border: '1px solid var(--tray-edge)',
-                  borderRadius: 8,
-                  color: 'var(--ink-on-dark)',
-                  padding: '10px 12px',
-                  font: 'inherit',
                 }}
               />
             ))}

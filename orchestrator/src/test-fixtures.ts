@@ -4,7 +4,7 @@ import {mkdir, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 
 import type {MediaPool, ProductionPlan, TrackInfo} from './contracts.js';
-import type {GeminiRequest, GeminiTransport, GeminiUsage} from './gemini.js';
+import {MODELS, type GeminiRequest, type GeminiTransport, type GeminiUsage} from './gemini.js';
 import type {PipelineDeps} from './pipeline.js';
 
 export const USAGE: GeminiUsage = {inputTokens: 10, outputTokens: 5, thoughtsTokens: 2};
@@ -74,6 +74,14 @@ export const PLAN: ProductionPlan = {
   voiceover: null,
   captions: {short: 'golden hour', long: 'A warm evening in four frames.'},
   hashtags: ['goldenhour'],
+};
+
+export const LIVE_PLAN: ProductionPlan = {
+  ...PLAN,
+  hero_shots: [
+    {id: 'img0', motion_prompt: 'the balloon drifts gently upward'},
+    {id: 'img2', motion_prompt: 'city lights flicker on at dusk'},
+  ],
 };
 
 export const goodEdl = (track = 'assets/audio/songa.wav') => ({
@@ -154,6 +162,6 @@ export const makeDeps = (
 ): PipelineDeps => ({
   transport,
   repoRoot: root,
-  directorModel: 'gemini-2.5-flash',
+  directorModel: MODELS.flash,
   spawnPy,
 });

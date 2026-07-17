@@ -7,7 +7,7 @@ const OkSchema = z.object({ok: z.boolean()});
 const okResponseSchema = {type: 'OBJECT', properties: {ok: {type: 'BOOLEAN'}}, required: ['ok']};
 
 const baseOpts = {
-  model: 'gemini-2.5-flash',
+  model: {id: 'gemini-2.5-flash', location: 'us-central1'},
   system: 'test system',
   parts: [{text: 'give me ok'}],
   zodSchema: OkSchema,

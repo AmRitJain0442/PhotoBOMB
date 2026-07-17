@@ -10,6 +10,14 @@ describe('copyFor', () => {
     expect(copyFor('finalize')).toBe('Almost there…');
   });
 
+  it('covers the dynamic-media stages', () => {
+    expect(copyFor('enhance')).toBe('Giving your photos the darkroom treatment…');
+    expect(copyFor('animate')).toBe('Bringing a moment to life…');
+    expect(copyFor('film')).toBe('Directing your film…');
+    expect(friendlyError('film_failed')).toMatch(/film/i);
+    expect(friendlyError('film_no_tweaks')).toMatch(/re-taken/i);
+  });
+
   it('falls back for unknown or missing stages', () => {
     expect(copyFor('warp')).toBe('Developing…');
     expect(copyFor(null)).toBe('Developing…');

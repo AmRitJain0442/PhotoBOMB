@@ -20,8 +20,14 @@ the final EDL (edit decision list) JSON that the renderer executes verbatim.
   previous one ends — no gaps, no overlaps.
 - Every cut (every entry's `start_ms` and `end_ms`) must land within ±33 ms of
   a value in `beat_grid_ms`. `0` and `duration_ms` count as on-grid endpoints.
-- Use ONLY asset ids from the plan's `selects`; `kind` is always `"still"`.
-  You may drop selects if the beat math needs fewer shots, but never invent ids.
+- Use ONLY asset ids from the plan's `selects`. You may drop selects if the
+  beat math needs fewer shots, but never invent ids.
+- `kind` is `"still"` — EXCEPT for hero assets whose pool record carries a
+  `clip` object. Those may (and should) get ONE entry with `"kind": "clip"`:
+  a live moment. Its length must be at most `clip.duration_ms` and ideally
+  2–4 beats. Never place two clip entries back-to-back, never put a
+  `cutout_pop` on a clip entry, and never use `"kind": "clip"` for an asset
+  without a `clip` record.
 - Every entry gets `motion` of type `ken_burns`: focal point = the center of
   that photo's `subject_bbox` (`cx = (x_min+x_max)/2`, `cy = (y_min+y_max)/2`),
   `zoom` between 1.0 and 1.25, pan small (move `cx`/`cy` by at most 0.08

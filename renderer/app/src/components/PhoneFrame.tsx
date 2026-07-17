@@ -10,17 +10,7 @@ export const PhoneFrame: React.FC<{
   assets: Record<string, string>;
   dimmed?: boolean;
 }> = ({edl, assets, dimmed}) => (
-  <div
-    style={{
-      background: 'var(--tray)',
-      border: '1px solid var(--tray-edge)',
-      borderRadius: 28,
-      padding: 12,
-      width: 'fit-content',
-      opacity: dimmed ? 0.45 : 1,
-      transition: 'opacity 0.2s ease',
-    }}
-  >
+  <div className="phone-frame" style={{opacity: dimmed ? 0.45 : 1}}>
     <Player
       component={Reel}
       inputProps={{edl, assets}}

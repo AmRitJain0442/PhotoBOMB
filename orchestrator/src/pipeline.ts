@@ -9,15 +9,19 @@ import {
   PipelineError,
   type MediaPool,
   type ProductionPlan,
+  type ReelStyle,
   type RunMeta,
   type StageName,
 } from './contracts.js';
-import {MODELS, type GeminiTransport} from './gemini.js';
+import {MODELS, type GeminiTransport, type ModelRef} from './gemini.js';
 import {runDir} from './paths.js';
 import {runAnalyze} from './stages/analyze.js';
+import {runAnimate, type HeroClip} from './stages/animate.js';
 import {chooseTrackSet, loadTracks} from './stages/audio.js';
 import {runDirect} from './stages/direct.js';
-import {runFinalize} from './stages/finalize.js';
+import {runEnhance} from './stages/enhance.js';
+import {runFilm} from './stages/film.js';
+import {runFinalize, runFinalizeFilm} from './stages/finalize.js';
 import {runProduce} from './stages/produce.js';
 
 export type {StageName} from './contracts.js';
@@ -26,7 +30,7 @@ export type Progress = (stage: StageName, state: 'running' | 'done') => void;
 export type PipelineDeps = {
   transport: GeminiTransport;
   repoRoot: string;
-  directorModel: string;
+  directorModel: ModelRef;
   spawnPy: (script: string, args: string[]) => Promise<{code: number; stdout: string}>;
 };
 
@@ -36,13 +40,15 @@ export type RunResult = {
   plan: ProductionPlan;
   mediaPool: MediaPool;
   meta: RunMeta;
+  /** id -> renderer-relative path for every asset the EDL references */
+  assetPaths: Record<string, string>;
 };
 
 export type Avoid = {track_id?: string; summary?: string};
 
 const newRunId = (): string => `p${Date.now()}${Math.random().toString(36).slice(2, 5)}`;
 
-export function resolveDirectorModel(env: Record<string, string | undefined>): string {
+export function resolveDirectorModel(env: Record<string, string | undefined>): ModelRef {
   return env.DARKROOM_DIRECTOR_MODEL === 'pro' ? MODELS.pro : MODELS.flash;
 }
 
@@ -66,18 +72,25 @@ export function makeSpawnPy(repoRoot: string): PipelineDeps['spawnPy'] {
   };
 }
 
+const poolFile = (mediaPool: MediaPool, id: string): string | undefined =>
+  mediaPool.pool.find((e) => e.id === id)?.file;
+
 export async function runPipeline(
   opts: {
     photosDir: string;
     track: 'auto' | string;
     avoid?: Avoid;
     runId?: string;
+    style?: ReelStyle;
+    enhance?: boolean;
     deps: PipelineDeps;
   },
   onProgress: Progress,
 ): Promise<RunResult> {
   const {deps} = opts;
   const runId = opts.runId ?? newRunId();
+  const style = opts.style ?? 'classic';
+  const wantEnhance = (opts.enhance ?? false) && style !== 'film';
 
   onProgress('analyze', 'running');
   const mediaPool = await runAnalyze(deps, opts.photosDir, runId);
@@ -86,13 +99,63 @@ export async function runPipeline(
   onProgress('produce', 'running');
   const allTracks = await loadTracks(deps.repoRoot);
   const {tracks, pinned} = chooseTrackSet(allTracks, opts.track);
-  const produced = await runProduce(deps, {mediaPool, tracks, pinned, avoid: opts.avoid});
+  const produced = await runProduce(deps, {mediaPool, tracks, pinned, style, avoid: opts.avoid});
   const chosen =
     allTracks.find((t) => t.id === produced.plan.audio.track_id) ?? pinned ?? tracks[0];
   onProgress('produce', 'done');
 
+  if (style === 'film') {
+    onProgress('film', 'running');
+    const refPaths = produced.plan.selects
+      .map((id) => poolFile(mediaPool, id))
+      .filter((f): f is string => Boolean(f))
+      .map((f) => path.join(opts.photosDir, f));
+    const film = await runFilm(deps, {
+      refPaths,
+      prompt: produced.plan.film_prompt ?? produced.plan.story.read,
+      runId,
+    });
+    onProgress('film', 'done');
+
+    onProgress('finalize', 'running');
+    const result = await runFinalizeFilm(deps, {
+      runId,
+      plan: produced.plan,
+      mediaPool,
+      filmFile: film.file,
+      durationMs: film.durationMs,
+      usage: {produce: produced.usage},
+      avoid: opts.avoid,
+    });
+    onProgress('finalize', 'done');
+    return result;
+  }
+
+  let enhanced = new Map<string, string>();
+  if (wantEnhance) {
+    onProgress('enhance', 'running');
+    enhanced = await runEnhance(deps, {photosDir: opts.photosDir, ids: produced.plan.selects});
+    onProgress('enhance', 'done');
+  }
+
+  let clips = new Map<string, HeroClip>();
+  if (style === 'live' && produced.plan.hero_shots.length > 0) {
+    onProgress('animate', 'running');
+    const heroes = produced.plan.hero_shots.flatMap((hero) => {
+      const file = poolFile(mediaPool, hero.id);
+      if (!file) return [];
+      const enhancedPath = enhanced.get(hero.id);
+      const sourcePath = enhancedPath
+        ? path.join(deps.repoRoot, 'renderer', 'public', enhancedPath)
+        : path.join(opts.photosDir, file);
+      return [{id: hero.id, motionPrompt: hero.motion_prompt, sourcePath}];
+    });
+    clips = await runAnimate(deps, {heroes});
+    onProgress('animate', 'done');
+  }
+
   onProgress('direct', 'running');
-  const directed = await runDirect(deps, {plan: produced.plan, mediaPool, track: chosen});
+  const directed = await runDirect(deps, {plan: produced.plan, mediaPool, track: chosen, clips});
   onProgress('direct', 'done');
 
   onProgress('finalize', 'running');
@@ -104,6 +167,10 @@ export async function runPipeline(
     track: chosen,
     usage: {produce: produced.usage, direct: directed.usage},
     avoid: opts.avoid,
+    enhanced,
+    clips,
+    style,
+    enhance: wantEnhance,
   });
   onProgress('finalize', 'done');
   return result;
@@ -126,6 +193,11 @@ export async function revisePipeline(
     readFile(path.join(dir, 'production_plan.json'), 'utf8').then(JSON.parse),
     readFile(path.join(dir, 'meta.json'), 'utf8').then(JSON.parse),
   ])) as [MediaPool, ProductionPlan, RunMeta];
+
+  const derived = prevMeta.derived ?? {style: 'classic', enhance: false, enhanced: {}, clips: {}};
+  if (derived.style === 'film') {
+    throw new PipelineError('direct', 'film_no_tweaks', 'film takes can only be re-taken');
+  }
 
   let plan: ProductionPlan = prevPlan;
   if (opts.pin) {
@@ -152,8 +224,19 @@ export async function revisePipeline(
     );
   }
 
+  // rebuild derived media from the previous run, dropping removed selects
+  const selectSet = new Set(plan.selects);
+  const enhanced = new Map(
+    Object.entries(derived.enhanced).filter(([id]) => selectSet.has(id)),
+  );
+  const clips = new Map(
+    Object.entries(derived.clips)
+      .filter(([id]) => selectSet.has(id))
+      .map(([id, c]) => [id, {file: c.file, durationMs: c.duration_ms}]),
+  );
+
   onProgress('direct', 'running');
-  const directed = await runDirect(deps, {plan, mediaPool, track});
+  const directed = await runDirect(deps, {plan, mediaPool, track, clips});
   onProgress('direct', 'done');
 
   onProgress('finalize', 'running');
@@ -165,6 +248,10 @@ export async function revisePipeline(
     track,
     usage: {direct: directed.usage},
     avoid: prevMeta.avoid ?? undefined,
+    enhanced,
+    clips,
+    style: derived.style,
+    enhance: derived.enhance,
   });
   onProgress('finalize', 'done');
   return result;

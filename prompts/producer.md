@@ -13,7 +13,8 @@ photo montage reel.
 2. Either a list of available tracks (each `{id, file, bpm, beat_grid_ms,
    energy_curve, duration_ms, mood, feel}`) to choose from, or a single pinned
    track you MUST use.
-3. Optionally an `avoid` note describing a previous take the user rejected.
+3. A `style` line: `classic`, `live`, or `film`, with the rule for that style.
+4. Optionally an `avoid` note describing a previous take the user rejected.
 
 ## Definitions
 
@@ -37,8 +38,13 @@ photo montage reel.
   a one-line `reason` (e.g. "84 BPM, warm and unhurried — matches the golden
   mood_tags"). `trim_start_ms` is 0 unless the track clearly starts with dead
   air. If a track is pinned, use it and explain the fit.
-- **hero_shots** must be `[]` and **voiceover** must be `null` (not available
-  in this milestone).
+- **hero_shots / film_prompt follow the style rule you were given.**
+  - `classic`: `hero_shots: []`, no `film_prompt`.
+  - `live`: 1–2 `hero_shots` — `{id, motion_prompt}` where `motion_prompt` is
+    one grounded sentence of subtle, realistic motion for that exact photo.
+  - `film`: `hero_shots: []` plus `film_prompt` — a 3–5 sentence brief for one
+    continuous 10–12 second vertical film grounded only in the photos.
+- **voiceover** must be `null` (not available in this milestone).
 - **typography_direction**: one short phrase guiding the Director's text styling
   (e.g. "sparse lowercase captions, warm and personal").
 - **quote**: write 1–2 short poetic lines (6 words max per line) grounded in
@@ -68,7 +74,8 @@ Respond with the production_plan JSON ONLY — no prose, no markdown fences:
   "duration_ms": 7000|15000|30000,
   "selects": ["id", ...],
   "rejects": [{"id": "...", "reason": "..."}],
-  "hero_shots": [],
+  "hero_shots": [{"id": "...", "motion_prompt": "..."}],
+  "film_prompt": "... (film style only)",
   "audio": {"track_id": "...", "reason": "...", "trim_start_ms": 0},
   "typography_direction": "...",
   "quote": {"lines": [[{"text": "...", "bold": false, "underline": false, "tone": "white"}, {"text": "...", "bold": true, "underline": false, "tone": "yellow"}]]},

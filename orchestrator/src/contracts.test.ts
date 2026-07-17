@@ -10,9 +10,34 @@ describe('ProductionPlanSchema', () => {
     expect(parsed.selects).toHaveLength(4);
   });
 
-  it('rejects non-empty hero_shots (M1 has no veo)', () => {
-    const bad = {...PLAN, hero_shots: [{id: 'img0', veo_prompt: 'push in'}]};
-    expect(() => ProductionPlanSchema.parse(bad)).toThrow();
+  it('accepts up to 2 hero shots with motion prompts', () => {
+    const parsed = ProductionPlanSchema.parse({
+      ...PLAN,
+      hero_shots: [
+        {id: 'img0', motion_prompt: 'the balloon drifts gently upward'},
+        {id: 'img2', motion_prompt: 'city lights flicker on at dusk'},
+      ],
+    });
+    expect(parsed.hero_shots).toHaveLength(2);
+  });
+
+  it('rejects 3 hero shots and heroes without motion prompts', () => {
+    const hero = {id: 'img0', motion_prompt: 'drift'};
+    expect(() =>
+      ProductionPlanSchema.parse({...PLAN, hero_shots: [hero, hero, hero]}),
+    ).toThrow();
+    expect(() =>
+      ProductionPlanSchema.parse({...PLAN, hero_shots: [{id: 'img0', motion_prompt: ''}]}),
+    ).toThrow();
+  });
+
+  it('accepts an optional film_prompt', () => {
+    const parsed = ProductionPlanSchema.parse({
+      ...PLAN,
+      film_prompt: 'A dusk-to-dark city story told through balloons and rooftops.',
+    });
+    expect(parsed.film_prompt).toContain('dusk-to-dark');
+    expect(ProductionPlanSchema.parse(PLAN).film_prompt).toBeUndefined();
   });
 
   it('rejects any mode other than montage', () => {

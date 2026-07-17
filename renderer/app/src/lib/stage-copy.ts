@@ -4,6 +4,9 @@
 const STAGE_COPY: Record<string, string> = {
   analyze: 'Looking at your photos…',
   produce: 'Finding the story…',
+  enhance: 'Giving your photos the darkroom treatment…',
+  animate: 'Bringing a moment to life…',
+  film: 'Directing your film…',
   direct: 'Cutting to the beat…',
   finalize: 'Almost there…',
 };
@@ -17,6 +20,8 @@ const ERROR_COPY: Record<string, string> = {
   too_few_photos: 'A reel needs at least 3 photos.',
   no_music: 'Add a song first — reels need a beat.',
   setup: "Darkroom isn't connected to its AI yet. Check the service key and restart.",
+  film_failed: "That film didn't come out — try another take or switch to a montage.",
+  film_no_tweaks: 'Films can only be re-taken, not tweaked — try another take.',
 };
 
 export function friendlyError(code: string | null | undefined): string {

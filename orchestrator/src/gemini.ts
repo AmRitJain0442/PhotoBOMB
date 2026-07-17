@@ -2,13 +2,20 @@
 import {join} from 'node:path';
 import type {z} from 'zod';
 
-export const MODELS = {flash: 'gemini-2.5-flash', pro: 'gemini-2.5-pro'} as const;
-export const VERTEX = {project: 'project-a2dcdad0-5d65-4d61-846', location: 'us-central1'} as const;
+// Every model carries its own Vertex location: Gemini 3 lives at `global`,
+// the 2.5 family at us-central1.
+export type ModelRef = {id: string; location: string};
+
+export const MODELS = {
+  flash: {id: 'gemini-3-flash-preview', location: 'global'},
+  pro: {id: 'gemini-2.5-pro', location: 'us-central1'},
+} as const;
+export const VERTEX = {project: 'project-a2dcdad0-5d65-4d61-846'} as const;
 
 export type GeminiUsage = {inputTokens: number; outputTokens: number; thoughtsTokens: number};
 
 export type GeminiRequest = {
-  model: string;
+  model: ModelRef;
   system: string;
   parts: Array<{text: string}>;
   responseSchema: object;
@@ -49,7 +56,7 @@ const tryParse = <T>(text: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>):
 
 export async function generateJson<T>(opts: {
   transport: GeminiTransport;
-  model: string;
+  model: ModelRef;
   system: string;
   parts: Array<{text: string}>;
   zodSchema: z.ZodType<T, z.ZodTypeDef, unknown>;
@@ -111,26 +118,33 @@ export function resolveCredentials(repoRoot: string): {ok: boolean; message?: st
   };
 }
 
-/** Real Vertex transport via @google/genai. Lazy client so tests never touch it. */
-let cachedClient: import('@google/genai').GoogleGenAI | null = null;
+/** Real Vertex transport via @google/genai. Lazy per-location clients so
+ * tests never touch them. */
+const clients = new Map<string, import('@google/genai').GoogleGenAI>();
 
 export const vertexTransport: GeminiTransport = async (req) => {
-  if (!cachedClient) {
+  let client = clients.get(req.model.location);
+  if (!client) {
     const {GoogleGenAI} = await import('@google/genai');
-    cachedClient = new GoogleGenAI({
+    client = new GoogleGenAI({
       vertexai: true,
       project: VERTEX.project,
-      location: VERTEX.location,
+      location: req.model.location,
     });
+    clients.set(req.model.location, client);
   }
-  const response = await cachedClient.models.generateContent({
-    model: req.model,
+  const isGemini3 = req.model.id.startsWith('gemini-3');
+  const response = await client.models.generateContent({
+    model: req.model.id,
     contents: [{role: 'user', parts: req.parts}],
     config: {
       systemInstruction: req.system,
       responseMimeType: 'application/json',
       responseSchema: req.responseSchema,
       maxOutputTokens: req.maxOutputTokens,
+      // Gemini 3 paces reasoning by level, not token budget; LOW keeps the
+      // structured-output stages fast without starving them.
+      ...(isGemini3 ? {thinkingConfig: {thinkingLevel: 'LOW' as never}} : {}),
     },
   });
   const meta = response.usageMetadata;

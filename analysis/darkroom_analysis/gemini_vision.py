@@ -9,8 +9,8 @@ import mimetypes
 from pathlib import Path
 
 PROJECT = "project-a2dcdad0-5d65-4d61-846"
-LOCATION = "us-central1"
-MODEL = "gemini-2.5-flash"
+LOCATION = "global"  # Gemini 3 lives at the global Vertex endpoint
+MODEL = "gemini-3-flash-preview"
 
 _INSTRUCTION = """You are a photo analyst for short-form video editing.
 You will receive {n} photos. Return a JSON array with EXACTLY {n} objects,
