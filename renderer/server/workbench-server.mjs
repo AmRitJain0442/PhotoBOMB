@@ -240,17 +240,24 @@ export function createApp({pipelineImpl, ingestImpl, checkCredentials, roots}) {
     const propsPath = join(outDir, `darkroom-${ts}.json`);
     writeFileSync(propsPath, JSON.stringify({edl, assets}));
     Object.assign(job, {state: 'running', file: outName, error: null, log: ''});
+    // spawn the CLI through the current node binary — npx + shell:true dies
+    // silently when the server outlives its parent shell on Windows
+    const remotionCli = join(rendererRoot, 'node_modules', '@remotion', 'cli', 'remotion-cli.js');
     const child = spawn(
-      'npx',
-      ['remotion', 'render', 'Reel', `out/${outName}`, `--props=${propsPath}`, '--log=error'],
-      {cwd: rendererRoot, shell: true},
+      process.execPath,
+      [remotionCli, 'render', 'Reel', `out/${outName}`, `--props=${propsPath}`, '--log=error'],
+      {cwd: rendererRoot},
     );
     const append = (d) => {
       job.log = (job.log + d.toString()).slice(-4000);
     };
     child.stdout.on('data', append);
     child.stderr.on('data', append);
+    child.on('error', (e) => {
+      Object.assign(job, {state: 'failed', error: `could not start the renderer: ${e.message}`});
+    });
     child.on('close', (code) => {
+      if (job.state === 'failed') return; // spawn error already reported
       const ok = code === 0 && existsSync(join(outDir, outName));
       job.state = ok ? 'done' : 'failed';
       if (!ok) {
